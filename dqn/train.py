@@ -11,7 +11,6 @@ from helpers import preprocess_image, shift_tensor
 
 import random
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 writer = SummaryWriter()
 
@@ -107,6 +106,7 @@ def train(env, memory_size, batch_size, gamma, target_update, lr, episodes, stac
         state = _init_state(o, stack_frames).to(device)
         while not done:
             steps += 1
+            total_steps += 1
 
             action = _select_action(state, epsilon, action_space, policy_net)
 

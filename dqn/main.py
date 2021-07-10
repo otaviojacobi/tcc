@@ -8,7 +8,7 @@ gym_envs = [
 
 parser = argparse.ArgumentParser(description='Train DQN.')
 
-parser.add_argument('--env', choices=gym_envs, default='Breakout-v4', help='The gym environment to run')
+parser.add_argument('--env', choices=gym_envs, default='PongNoFrameskip-v4', help='The gym environment to run')
 parser.add_argument('--memory_size', type=int, default=int(30000), help='Replay Buffer size')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch Size')
 parser.add_argument('--gamma', type=float, default=0.99, help='Q-learning gamma')
