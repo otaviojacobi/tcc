@@ -101,7 +101,7 @@ class Hallway:
 
         self._current_state = next_state
 
-        return r, k
+        return r, self._current_state
 
     def __primitive_step(self, option):
 
