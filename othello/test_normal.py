@@ -1,6 +1,6 @@
 from random import choice
 import time
-from othello_cython import Othello
+from othello import Othello
 
 black_wins = 0
 white_wins = 0
