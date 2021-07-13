@@ -2,15 +2,18 @@ from random import choice
 import time
 from othello_cython import Othello
 
+import ray
+ray.init(local_mode=True)
+
+print('heyy')
+
 black_wins = 0
 white_wins = 0
 draw = 0
 
-start_time = time.time()
-
-for k in range(1000):
+@ray.remote
+def simulation():
     o = Othello()
-
     while True:
         moves = o.legal_moves()
 
@@ -18,16 +21,14 @@ for k in range(1000):
             break
 
         move = choice(moves)
-
         o.play(move)
 
-    score = o.score()
-    if score > 0:
-        black_wins += 1
-    elif score < 0:
-        white_wins +=1
-    else:
-        draw += 1
+    return o.score()
+
+start_time = time.time()
+
+futures = [simulation() for _ in range(1000)]
+#pprint(ray.get(futures)) # [0, 1, 4, 9]
 
 print("--- %s seconds ---" % (time.time() - start_time))
-print(white_wins, black_wins, draw)
+#print(white_wins, black_wins, draw)

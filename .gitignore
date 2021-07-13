@@ -2,3 +2,4 @@
 .vscode/
 **/.ipynb_checkpoints/
 .DS_STORE
+**/rars/
