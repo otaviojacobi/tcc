@@ -3,3 +3,6 @@
 **/.ipynb_checkpoints/
 .DS_STORE
 **/rars/
+**/build/
+othello/othello_cython.cpp
+*.so
