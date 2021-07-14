@@ -3,6 +3,6 @@ from Cython.Build import cythonize
 
 setup(
     name='Othello Cython app',
-    ext_modules=cythonize("othello_cython.pyx"),
+    ext_modules=cythonize("*.pyx"),
     zip_safe=False,
 )

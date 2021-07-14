@@ -4,5 +4,6 @@
 .DS_STORE
 **/rars/
 **/build/
-othello/othello_cython.cpp
+**/othello_cython.cpp
+**/mcts.cpp
 *.so

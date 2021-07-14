@@ -28,11 +28,11 @@ class Othello:
     def play(self, move):
         self.__board[move] = self.__current_player
         self.__empties.remove(move)
-        
-        
+
+
         for direction in DIRECTIONS:
             self.__flip(move, direction)
-            
+
         self.__current_player = self.opponent()
         
     def score(self):
@@ -62,7 +62,10 @@ class Othello:
         return None if self.__board[bracket] in (OUTER, EMPTY) else bracket
     
     def __has_bracket(self, move):
-            return any(map(lambda d: self.__find_bracket(move, d), DIRECTIONS))
+        for d in DIRECTIONS:
+            if self.__find_bracket(move, d):
+                return True
+        return False
     
     
     def __new_board(self):
@@ -81,7 +84,7 @@ class Othello:
         empties.discard(45)
         empties.discard(54)
         empties.discard(55)
-        
+
         return board, empties
     
     def __str__(self):

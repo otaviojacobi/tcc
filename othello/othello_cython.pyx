@@ -46,6 +46,9 @@ cdef class Othello:
     cpdef char opponent(self):
         return -1 * self.current_player
 
+    cpdef char* get_board(self):
+        return self.board
+
     cpdef bint has_bracket(self, char move):
         for i in range(8):
             if self.find_bracket(move, DIRECTIONS[i]) != -1:

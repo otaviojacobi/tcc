@@ -1,32 +1,12 @@
 from random import choice
 import time
-from othello_cython import Othello
+import matplotlib.pyplot as plt
 
-import ray
-ray.init(address='auto')
+from othello import Othello as Othello
+from othello_cython import Othello as OthelloCython
+from othello_numba import Othello as OthelloNumba
 
-black_wins = 0
-white_wins = 0
-draw = 0
-
-SIMS = 30000
-
-def seq_simulation():
-    o = Othello()
-    while True:
-        moves = o.legal_moves()
-
-        if len(moves) == 0:
-            break
-
-        move = choice(moves)
-        o.play(move)
-
-    return o.score()
-
-@ray.remote
-def simulation():
-    o = Othello()
+def run_simulation(o):
     while True:
         moves = o.legal_moves()
 
@@ -39,13 +19,34 @@ def simulation():
     return o.score()
 
 
-start_time = time.time()
-futures = [simulation.remote() for _ in range(SIMS)]
-a = ray.get(futures) # [0, 1, 4, 9]
-print("--- %s seconds ---" % (time.time() - start_time))
+def run_cython_simulations(sims):
+    start_time = time.time()
+    for _ in range(sims):
+        run_simulation(OthelloCython())
+    return time.time() - start_time
 
+def run_numba_simulations(sims):
+    start_time = time.time()
+    for _ in range(sims):
+        run_simulation(OthelloNumba.new())
+    return time.time() - start_time
 
-start_time = time.time()
-a = [seq_simulation() for _ in range(SIMS)] # [0, 1, 4, 9]
-print("--- %s seconds ---" % (time.time() - start_time))
-#print(white_wins, black_wins, draw)
+# Compile Numba
+o = run_simulation(OthelloNumba.new())
+
+SIMS_RANGE = (500, 1500, 100)
+
+total_native_times = []
+total_cython_times = []
+total_numba_times = []
+for SIMS in range(*SIMS_RANGE):
+    print(SIMS)
+    total_cython_times.append(run_cython_simulations(SIMS))
+    total_numba_times.append(run_numba_simulations(SIMS))
+
+plt.plot(total_cython_times, label='cython')
+plt.plot(total_numba_times, label='numba')
+
+plt.legend()
+
+plt.savefig('result.png')
