@@ -1,27 +1,33 @@
-from mcts_cython import MCTS as MCTSCython
-from othello_cython import Othello as OthelloCython
-
-from mcts import MCTS
-from othello_numba import Othello
-
+from mcts_cython import MCTS
+from othello_cython import Othello
 
 import time
 from random import choice
 
 start_time = time.time()
 
-o = OthelloCython()
-n = MCTSCython(o)
+o = Othello()
+while True:
 
-n.run(1000)
+
+    moves = o.legal_moves()
+    if len(moves) == 0:
+        break
+
+    move = choice(moves)
+    o.play(move)
+
+    moves = o.legal_moves()
+    if len(moves) == 0:
+        break
+
+    m = MCTS(o)
+    a = m.run(1000)
+    o.play(a)
+
+    #o.render()
+
+print(o.score())
+
 
 print('[CYTHON] Time for 100 simulation ', time.time() - start_time)
-
-start_time = time.time()
-
-o = Othello.new()
-n = MCTS(o)
-
-n.run(1000)
-
-print('[NUMBA] Time for 100 simulation ', time.time() - start_time)

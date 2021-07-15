@@ -24,7 +24,7 @@ cdef class Othello:
     cdef char[100] empties
     cdef char current_player
 
-    def __init__(self, empties_clear=False):
+    def __init__(self):
         self.board = [OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, EMPTY, EMPTY,
                         EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, OUTER, OUTER, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
                         EMPTY, EMPTY, EMPTY, OUTER, OUTER, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
@@ -45,9 +45,9 @@ cdef class Othello:
 
         self.current_player = BLACK
 
-    def copy(self):
-        o = Othello(empties_clear=True)
-        
+
+    cpdef object copy(self):
+        o = Othello()
         memcpy(o.board, self.board, 100)
         memcpy(o.empties, self.empties, 100)
 

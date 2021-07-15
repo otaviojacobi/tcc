@@ -2,37 +2,35 @@
 # cython: language_level=3
 from othello_cython import Othello
 
-from libcpp.unordered_map cimport unordered_map
-from libcpp.set cimport set
 from libc.math cimport sqrt, log
 from libc.stdlib cimport rand
 
 from cpython.ref cimport PyObject
-from cython.operator import dereference, postincrement
 
 cdef class Node:
-    cdef PyObject* state
+    cdef object state
     cdef PyObject* parent
     cdef unsigned int won
     cdef unsigned int visits
 
     cdef dict children
-    cdef set[char] unexpanded
+    cdef set unexpanded
 
     def __init__(self, object board, object parent = None):
-        self.state = <PyObject*>board
+        self.state = board
         self.won = 0
         self.visits = 0
 
         self.parent = <PyObject*>parent
 
+        self.unexpanded = set()
         self.children = dict()
         for move in board.legal_moves():
             self.children[move] = None
-            self.unexpanded.insert(move)
+            self.unexpanded.add(move)
 
     cpdef bint is_fully_expanded(self):
-        return self.unexpanded.empty()
+        return len(self.unexpanded) == 0
 
     cpdef bint is_leaf(self):
         return len(self.children) == 0
@@ -42,7 +40,7 @@ cdef class Node:
         return (self.won/self.visits) + c * sqrt(2 * log(parent.visits_count())/self.visits )
 
     cpdef object get_highest_ucb_child(self):
-        cdef double hi = -1.0
+        cdef double hi = -100.0
 
         cdef double ucb
         cdef object best_child
@@ -56,15 +54,14 @@ cdef class Node:
         return best_child
 
     cpdef char get_random_unexplored_action(self):
-        cdef set[char].iterator it = self.unexpanded.begin()
-        return dereference(it)
+        return next(iter(self.unexpanded))
 
     cpdef object get_state_copy(self):
-        state = <object>self.state
+        state = self.state
         return state.copy()
 
     cpdef void expand(self, char action, object new_child):
-        self.unexpanded.erase(action)
+        self.unexpanded.remove(action)
         self.children[action] = new_child
 
     cpdef char get_player(self):
@@ -124,7 +121,7 @@ cdef class MCTS:
 
         return self.root.get_best_action()
 
-    cpdef search(self):
+    cpdef object search(self):
         cdef object cur_node = self.root
 
         while cur_node.is_fully_expanded() and not cur_node.is_leaf():
