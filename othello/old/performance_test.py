@@ -34,7 +34,7 @@ def run_numba_simulations(sims):
 # Compile Numba
 o = run_simulation(OthelloNumba.new())
 
-SIMS_RANGE = (500, 1500, 100)
+SIMS_RANGE = (500, 800, 100)
 
 total_native_times = []
 total_cython_times = []

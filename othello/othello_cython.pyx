@@ -1,7 +1,7 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from libcpp.set cimport set
+from libc.string cimport memcpy
 
 cdef char OUTER = -2
 cdef char EMPTY = 0
@@ -21,10 +21,10 @@ cdef char[8] DIRECTIONS = [UP, DOWN, LEFT, RIGHT, UP_RIGHT, DOWN_RIGHT, DOWN_LEF
 
 cdef class Othello:
     cdef char[100] board
-    cdef set[char] empties
+    cdef char[100] empties
     cdef char current_player
 
-    def __init__(self):
+    def __init__(self, empties_clear=False):
         self.board = [OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, EMPTY, EMPTY,
                         EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, OUTER, OUTER, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
                         EMPTY, EMPTY, EMPTY, OUTER, OUTER, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
@@ -34,11 +34,26 @@ cdef class Othello:
                         EMPTY, OUTER, OUTER, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, OUTER, OUTER,
                         OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER]
 
-        for i in range(100):
-            if self.board[i] == EMPTY:
-                self.empties.insert(i)
+        self.empties = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1.,
+                        1., 1., 1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1.,
+                        1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1.,
+                        0., 0., 1., 1., 1., 0., 0., 1., 1., 1., 0., 0., 1.,
+                        1., 1., 0., 0., 1., 1., 1., 0., 0., 1., 1., 1., 1.,
+                        1., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1.,
+                        1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 0., 0.,
+                        0., 0., 0., 0., 0., 0., 0., 0., 0.]
 
         self.current_player = BLACK
+
+    def copy(self):
+        o = Othello(empties_clear=True)
+        
+        memcpy(o.board, self.board, 100)
+        memcpy(o.empties, self.empties, 100)
+
+        o.current_player = self.current_player
+
+        return o
 
     cpdef char player(self):
         return self.current_player
@@ -82,7 +97,7 @@ cdef class Othello:
 
     cpdef void play(self, char move):
         self.board[move] = self.current_player
-        self.empties.erase(move)
+        self.empties[move] = 0
 
         for i in range(8):
             self.flip(move, DIRECTIONS[i])
@@ -101,9 +116,24 @@ cdef class Othello:
         return black_pieces - white_pieces
 
     def legal_moves(self):
-        cdef list moves = []
-        for move in self.empties:
-            if self.has_bracket(move):
-                moves.append(move)
+        return [move for move in range(100) if self.empties[move] == 1 and self.has_bracket(move) ]
 
-        return moves
+    def render(self):
+        
+        board = [OUTER] * 100
+        for i in range(100):
+            if self.board[i] == OUTER:
+                board[i] = '?'
+            elif self.board[i] == EMPTY:
+                board[i] = '.'
+            elif self.board[i] == BLACK:
+                board[i] = 'o'
+            else:
+                board[i] = 'X'
+        
+        rep = ''
+        rep += '  %s\n' % ' '.join(map(str, range(1, 9)))
+        for row in range(1, 9):
+            begin, end = 10*row + 1, 10*row + 9
+            rep += '%d %s\n' % (row, ' '.join(board[begin:end]))
+        print(rep)

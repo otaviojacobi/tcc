@@ -2,7 +2,7 @@ from numba import int8
 from numba.experimental import jitclass
 import numpy as np
 
-OUTER = int8(-2)
+OUTER = int8(-500)
 EMPTY = int8(0)
 BLACK = int8(1)
 WHITE = int8(-1)
@@ -35,7 +35,6 @@ spec = [
     ('board', int8[:]),
     ('empties', int8[:])
 ]
-
 @jitclass(spec)
 class Othello(object):
     def __init__(self, board, player, empties):
@@ -49,6 +48,9 @@ class Othello(object):
 
     def copy(self):
         return Othello(self.board.copy(), self.player, self.empties.copy())
+
+    def finished(self):
+        return len(self.legal_moves()) == 0
 
     def reset(self):
         self.board = initial_board.copy()
