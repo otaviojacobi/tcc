@@ -98,7 +98,7 @@ cdef class Node:
                 prob_winning = chance_of_winning
                 max_action = action
 
-        print(prob_winning)
+        #print(prob_winning)
         return max_action
 
 cdef class MCTS:
