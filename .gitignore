@@ -7,4 +7,5 @@
 **/othello_cython.cpp
 **/mcts_cython.cpp
 **/mcts.cpp
+**/alpha_search.cpp
 *.so

@@ -3,7 +3,10 @@
 
 from libc.string cimport memcpy
 
+import numpy as np
+
 cdef char OUTER = -2
+# DO NOT CHANGE EMTPY VALUE
 cdef char EMPTY = 0
 cdef char BLACK = -1
 cdef char WHITE = 1
@@ -18,6 +21,15 @@ cdef char DOWN_LEFT = 9
 cdef char UP_LEFT = -11
 
 cdef char[8] DIRECTIONS = [UP, DOWN, LEFT, RIGHT, UP_RIGHT, DOWN_RIGHT, DOWN_LEFT, UP_LEFT]
+
+cdef char[64] VALID_IDXS = [11, 12, 13, 14, 15, 16, 17, 18,
+                            21, 22, 23, 24, 25, 26, 27, 28,
+                            31, 32, 33, 34, 35, 36, 37, 38,
+                            41, 42, 43, 44, 45, 46, 47, 48,
+                            51, 52, 53, 54, 55, 56, 57, 58,
+                            61, 62, 63, 64, 65, 66, 67, 68,
+                            71, 72, 73, 74, 75, 76, 77, 78,
+                            81, 82, 83, 84, 85, 86, 87, 88]
 
 cdef class Othello:
     cdef char[100] board
@@ -115,6 +127,23 @@ cdef class Othello:
 
         return black_pieces - white_pieces
 
+    def get_board_2d(self):
+        board_state = np.zeros((3,8,8))
+
+        for valid_idx in range(64):
+            array_index = VALID_IDXS[valid_idx]
+            if self.board[array_index] == BLACK:
+                i, j = (array_index // 10) - 1, (array_index % 10) - 1
+                board_state[0, i, j] = 1
+            elif self.board[array_index] == WHITE:
+                i, j = (array_index // 10) - 1, (array_index % 10) - 1
+                board_state[1, i, j] = 1
+
+        if self.current_player == BLACK:
+            board_state[2,:,:] = 1 
+
+        return board_state
+
     def legal_moves(self):
         return [move for move in range(100) if self.empties[move] == 1 and self.has_bracket(move) ]
 
@@ -123,13 +152,13 @@ cdef class Othello:
         board = [OUTER] * 100
         for i in range(100):
             if self.board[i] == OUTER:
-                board[i] = '?'
+                board[i] = str(i)#'?'
             elif self.board[i] == EMPTY:
-                board[i] = '.'
+                board[i] = str(i)#'.'
             elif self.board[i] == BLACK:
-                board[i] = 'o'
+                board[i] = str(i)#'o'
             else:
-                board[i] = 'X'
+                board[i] = str(i)#'X'
         
         rep = ''
         rep += '  %s\n' % ' '.join(map(str, range(1, 9)))
