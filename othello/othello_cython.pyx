@@ -31,6 +31,14 @@ cdef char[64] VALID_IDXS = [11, 12, 13, 14, 15, 16, 17, 18,
                             71, 72, 73, 74, 75, 76, 77, 78,
                             81, 82, 83, 84, 85, 86, 87, 88]
 
+
+cpdef char action_to_move(char action):
+    return (10 * action // 8) + 11
+
+cpdef char move_to_action(char move):
+    return move - 11 - 2 * (move//10 - 1)
+
+#TODO: pass move is yet to be done
 cdef class Othello:
     cdef char[100] board
     cdef char[100] empties
@@ -94,7 +102,7 @@ cdef class Othello:
         if self.board[bracket] == OUTER or self.board[bracket] == EMPTY:
             return -1
 
-        return bracket
+        return bracket 
 
     cpdef void flip(self, char move, char direction):
         cdef char bracket = self.find_bracket(move, direction)
@@ -152,13 +160,13 @@ cdef class Othello:
         board = [OUTER] * 100
         for i in range(100):
             if self.board[i] == OUTER:
-                board[i] = str(i)#'?'
+                board[i] = '?'
             elif self.board[i] == EMPTY:
-                board[i] = str(i)#'.'
+                board[i] = '.'
             elif self.board[i] == BLACK:
-                board[i] = str(i)#'o'
+                board[i] = 'o'
             else:
-                board[i] = str(i)#'X'
+                board[i] = 'X'
         
         rep = ''
         rep += '  %s\n' % ' '.join(map(str, range(1, 9)))
