@@ -1,55 +1,48 @@
 import torch
-import time
-from random import choices
 
-from alpha_search import MCTS
-from othello_cython import Othello, move_to_action
-from model import AlphaNet
 from ReplayMemory import ReplayMemory
+from NeuralNet import NeuralNet
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from simulator import run_simulations
+from trainer import run_train
+from evaluator import run_evaluate
 
-nn = AlphaNet().to(device)
-
-
-TEMPERATURE = 1.0
-TOTAL_SIMULATIONS = 5
 MEMORY_SIZE = 50000
+LEARNING_RATE = 0.01
+BATCH_SIZE = 2048
+GAMMA = 0.99
+L2_TERM = 1e-4
+
+SIMULATIONS = 1
+TRAINING_STEPS = 10
+EVALUATION_STEPS = 10
 
 memory = ReplayMemory(MEMORY_SIZE)
 
-for sim in range(TOTAL_SIMULATIONS):
+best_nn = NeuralNet("cpu")
+current_nn = NeuralNet("cpu")
 
-  env = Othello()
-  m = MCTS(env, nn)
-  game_over = False
-  counter = 0
-  while True:
+def simulate(sims, memory, best_nn):
+    for sim in range(sims):
 
-    start_time = time.time()
-    possible_moves = env.legal_moves()
-    if len(possible_moves) == 0:
-      break
+        if sim % 10 == 1:
+            print(f'[SIMULATOR] Running simulation {sim}')
 
-    s, pi, z = m.run(200, TEMPERATURE)
+        run_simulations(memory, best_nn)
 
-    memory.push(s, pi, z)
+def train(training_steps, memory, current_nn, batch_size, gamma):
+    optimizer = torch.optim.Adam(current_nn.nn.parameters(), lr=LEARNING_RATE, weight_decay=L2_TERM)
 
-    distr = [pi[move_to_action(move)] for move in possible_moves]
-    a = choices(possible_moves, distr)[0]
-    env.play(a)
+    for training_step in range(training_steps):
+        run_train(current_nn, optimizer, memory, batch_size, gamma)
 
-    m.set_new_head(a)
+def evaluate(evaluation_steps, best_nn, current_nn):
+    for evaluate_step in range(evaluation_steps):
+        print(f'[EVALUATOR] Running evaluation {evaluate_step}')
+        run_evaluate(best_nn, current_nn)
 
-    counter += 1
-    if counter > 10:
-      TEMPERATURE = 0.01
-
-    print('Total time for 200 sims is: %d', time.time() - start_time)
-
-
-
-
-
-print(pi)
-print(z)
+# TODO: implement the evaluate function
+# TODO: Create a thread/ray-process for each of previous functions
+# TODO: create a locker for passing throught the best network/update its weights
+# TODO: run all of them in parallel
+# TODO: check ray serialization protocol

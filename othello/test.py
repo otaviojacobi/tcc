@@ -1,47 +1,29 @@
-from mcts_cython import MCTS
-from othello_cython import Othello
+from othello_cython import Othello, move_to_action
+from alpha_search import MCTS
+from random import choices
+from NeuralNet import NeuralNet
 
 import time
-from random import choice
-from tqdm import tqdm
+
+env = Othello()
+m = MCTS(env, NeuralNet())
+counter = 0
 
 start_time = time.time()
 
-black_win = 0
-white_win = 0
-draw = 0
-for _ in tqdm(range(100)):
-    o = Othello()
-    while True:
+while True:
 
-        moves = o.legal_moves()
-        if len(moves) == 0:
-            break
+    possible_moves = env.legal_moves()
+    if len(possible_moves) == 0:
+        break
 
-        #move = choice(moves)
-        #o.play(move)
-        m = MCTS(o)
-        a = m.run(100)
-        o.play(a)
-
-        moves = o.legal_moves()
-        if len(moves) == 0:
-            break
-
-        m = MCTS(o)
-        a = m.run(50)
-        o.play(a)
-
-    score = o.score()
-    if score > 0:
-        black_win += 1
-    elif score == 0:
-        draw += 1
-    else:
-        white_win += 1
-
-print('black', black_win)
-print('white', white_win)
-print('draw', draw)
+    s, pi, z = m.run(200, 1.0)
 
 
+    distr = [pi[move_to_action(move)] for move in possible_moves]
+    a = choices(possible_moves, distr)[0]
+    env.play(a)
+
+    m.set_new_head(a)
+
+print('Total time is', time.time() - start_time)

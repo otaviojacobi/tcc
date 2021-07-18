@@ -10,8 +10,6 @@ import numpy as np
 
 import torch
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 cdef class Edge:
     cdef double prior
@@ -203,9 +201,9 @@ cdef class Node:
 
     def get_p_v(self):
         board = self.state.get_board_2d()
-        state_input = torch.from_numpy(board).unsqueeze(0).to(device, dtype=torch.float)
+        state_input = torch.from_numpy(board).unsqueeze(0).to(self.net.get_device(), dtype=torch.float)
 
-        p, v = self.net(state_input)
+        p, v = self.net.forward(state_input)
 
         return p.detach().cpu().numpy()[0], v.item()
 
