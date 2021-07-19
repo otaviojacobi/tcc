@@ -21,6 +21,15 @@ std::tuple<torch::Tensor, torch::Tensor, double> MCTS::run(uint16_t simulations,
 
 
 void MCTS::setNewHead(int8_t move) {
+
+
+    for(auto &edge : *(this->_root->getChildEdges())) {
+        if(edge.first != move) {
+            edge.second->clear();
+        }
+    }
+
+
     this->_root = this->_root->getChildEdges()->at(move)->getChild();
 }
 

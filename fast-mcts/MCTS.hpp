@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cmath>
 #include <tuple>
+#include <stack>
+#include <map>
 
 #include <torch/torch.h>
 
@@ -14,6 +16,7 @@ class Node;
 class Edge {
 public:
     Edge(double prior, Node *parentNode, Node *childNode);
+    void clear();
     Node* getParent() const;
     Node* getChild() const;
     void update(double value);
@@ -34,6 +37,7 @@ private:
 class Node {
 public:
     Node(Game *board);
+    ~Node();
     double getTotalCount() const;
     bool isExpanded() const;
     bool isLeaf() const;
@@ -41,7 +45,7 @@ public:
     void setParentEdge(Edge *newParentEdge);
     Edge* getParentEdge() const;
 
-    std::unordered_map<int8_t, Edge*>* getChildEdges();
+    std::map<int8_t, Edge*>* getChildEdges();
 
     void incrementCounter();
 
@@ -56,7 +60,7 @@ public:
 private:
     Game* _board;
     Edge* _parentEdge;
-    std::unordered_map<int8_t, Edge*> _childEdges;
+    std::map<int8_t, Edge*> _childEdges;
 
     std::vector<int8_t> _moves;
 
@@ -64,7 +68,7 @@ private:
     bool _isLeaf;
     bool _isExpanded;
 
-    uint16_t _edgeCountSum;          // Minor optimization for UCB calculation
+    uint16_t _edgeCountSum;
 
     torch::Tensor _state;
     torch::Tensor _statePriors;

@@ -1,6 +1,5 @@
 #include "Othello.hpp"
 
-
 Othello::Othello() {}
 
 Othello::~Othello() {}
@@ -8,7 +7,7 @@ Othello::~Othello() {}
 void Othello::play(int8_t move) {
 
     this->_board[move] = this->_player;
-    this->_empties.erase(move);
+    this->_empties[move] = 0;
 
     for(int8_t i = 0; i < 8; i++) {
         this->flip(move, _OTHELLO_DIRECTIONS[i]);
@@ -20,9 +19,9 @@ void Othello::play(int8_t move) {
 std::vector<int8_t> Othello::moves() const {
     std::vector<int8_t> moves;
 
-    for (auto move: this->_empties) {
-        if(this->hasBracket(move)) {
-            moves.push_back(move);
+    for(int8_t i = 0; i < 100; i++) {
+        if(this->_empties[i] == 1 && this->hasBracket(i)) {
+            moves.push_back(i);
         }
     }
 
@@ -141,6 +140,6 @@ void Othello::setPlayer(int8_t newPlayer) {
     this->_player = newPlayer;
 }
 
-void Othello::setEmpties(std::unordered_set<int8_t> &newEmpties) {
-    this->_empties = newEmpties;
+void Othello::setEmpties(int8_t *newEmpties) {
+    memcpy(this->_empties, newEmpties, 100);
 }

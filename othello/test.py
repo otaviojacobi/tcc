@@ -19,11 +19,10 @@ while True:
 
     s, pi, z = m.run(200, 1.0)
 
-
     distr = [pi[move_to_action(move)] for move in possible_moves]
-    a = choices(possible_moves, distr)[0]
-    env.play(a)
+    move = choices(possible_moves, distr)[0]
+    env.play(move)
 
-    m.set_new_head(a)
+    m.set_new_head(move)
 
 print('Total time is', time.time() - start_time)

@@ -125,15 +125,14 @@ cdef class Othello:
         self.current_player = self.opponent()
 
     cpdef char score(self):
-        cdef char black_pieces = 0
-        cdef char white_pieces = 0
+        cdef char score = 0
         for i in range(100):
             if self.board[i] == BLACK:
-                black_pieces += 1
+                score += 1
             elif self.board[i] == WHITE:
-                white_pieces += 1
+                score -= 1
 
-        return black_pieces - white_pieces
+        return score
 
     def get_board_2d(self):
         board_state = np.zeros((3,8,8))
@@ -152,7 +151,7 @@ cdef class Othello:
 
         return board_state
 
-    def legal_moves(self):
+    cpdef list legal_moves(self):
         return [move for move in range(100) if self.empties[move] == 1 and self.has_bracket(move) ]
 
     def render(self):

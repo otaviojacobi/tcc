@@ -10,6 +10,38 @@ Edge::Edge(double prior, Node *parentNode, Node *childNode) {
     this->_childNode = childNode;
 }
 
+void Edge::clear() {
+
+    std::stack<Node*> theStack;
+
+    Node* curNode = this->_parentNode;
+    Node* tmpNode;
+
+
+    while(curNode != NULL || !theStack.empty()) {
+        if(curNode != NULL) {
+            theStack.push(curNode);
+
+            if(curNode->getChildEdges()->empty()) {
+                curNode = NULL;
+            } else {
+                curNode = curNode->getChildEdges()->begin()->second->getChild();
+            }
+
+            continue;
+        }
+        tmpNode = theStack.pop();
+
+        auto parentEdges = tmpNode->getParentEdge()->getParent()->getChildEdges();
+        parentEdges->erase(parentEdges->begin());
+
+        delete tmpNode->getParentEdge();
+        delete tmpNode;
+
+    }
+
+}
+
 Node* Edge::getParent() const {
     return this->_parentNode;
 }

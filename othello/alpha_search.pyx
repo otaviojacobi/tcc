@@ -10,10 +10,9 @@ import numpy as np
 
 import torch
 
-
 cdef class Edge:
     cdef double prior
-    cdef int count
+    cdef unsigned int count
     cdef double action_value
     cdef double value_sum
 
@@ -35,8 +34,9 @@ cdef class Edge:
     cpdef object get_child_node(self):
         return self.child_node
 
-    cpdef void update_edge_value(self, double value):
+    cpdef void update(self, double value):
         self.count += 1
+        self.parent_node.increment()
         self.value_sum += value
 
         self.action_value = self.value_sum / self.count
@@ -97,9 +97,13 @@ cdef class Node:
     cdef object state
     cdef object parent_edge
     cdef dict edges
+
+    cdef list possible_moves
     
     cdef bint is_leaf
     cdef bint is_expanded
+
+    cdef unsigned int total_count
 
     cdef object net
 
@@ -107,11 +111,13 @@ cdef class Node:
         self.state = board
         self.parent_edge = None
         self.net = net
+        self.total_count = 0
+        self.possible_moves = board.legal_moves()
 
         self.edges = dict()
 
         self.is_expanded = False
-        self.is_leaf = len(board.legal_moves()) == 0
+        self.is_leaf = len(self.possible_moves) == 0
 
     cpdef void delloc(self):
         if not self.parent_edge:
@@ -122,6 +128,8 @@ cdef class Node:
         edge_to_clear = sorted(edges.keys())[0]
         parent_node.clear_edge(edge_to_clear)
 
+    cpdef void increment(self):
+        self.total_count += 1
 
     cpdef void clear_edge(self, char edge_to_clear):
         del self.edges[edge_to_clear]
@@ -159,16 +167,10 @@ cdef class Node:
 
         return best_edge.get_child_node()
 
-    #TODO: this can be optimizing by also adding total visits to the node 
-    # so we don't have to loop for all the edges every time
     cpdef int get_total_count(self):
-        cdef int total = 0
-        for edge in self.edges.values():
-            total += edge.get_count()
-        return total
+        return self.total_count
 
     def get_s_pi_z(self, double T):
-        cdef list legal_moves = self.state.legal_moves()
         cdef list move_probs = list()
         cdef double total_prob = 0
         cdef double z = 0
@@ -178,7 +180,7 @@ cdef class Node:
 
         cdef action
 
-        for move in legal_moves:
+        for move in self.possible_moves:
             prob = self.edges[move].get_count() ** temperature
             total_prob += prob
             move_probs.append((move, prob))
@@ -201,11 +203,14 @@ cdef class Node:
 
     def get_p_v(self):
         board = self.state.get_board_2d()
+
         state_input = torch.from_numpy(board).unsqueeze(0).to(self.net.get_device(), dtype=torch.float)
 
-        p, v = self.net.forward(state_input)
+        with torch.no_grad():
+            p, v = self.net.forward(state_input)
 
         return p.detach().cpu().numpy()[0], v.item()
+
 
     cpdef double expand(self, bint should_add_noise = False):
 
@@ -214,9 +219,7 @@ cdef class Node:
         if should_add_noise:
             p = 0.75 * p + 0.25 * (np.random.dirichlet([.03] * len(p)))
 
-        legal_moves = self.state.legal_moves()
-
-        for move in legal_moves:
+        for move in self.possible_moves:
             new_state = self.state.copy()
             new_state.play(move)
 
@@ -236,7 +239,7 @@ cdef class Node:
         cpdef object cur_edge = self.parent_edge
         while cur_edge is not None:
             value = -1 * value 
-            cur_edge.update_edge_value(value)
+            cur_edge.update(value)
             cur_edge = cur_edge.get_parent_node().get_parent_edge()
 
     def info(self):
@@ -259,7 +262,6 @@ cdef class MCTS:
     def run(self, unsigned int simulations, double T):
         cdef object node
         cdef double value
-        cdef bint current_player_won
 
         for sim in range(simulations):
 

@@ -13,6 +13,11 @@ Node::Node(Game *board) {
     this->_edgeCountSum = 0;
 }
 
+Node::~Node() {
+    delete this->_board;
+
+}
+
 double Node::getTotalCount() const {
     return this->_edgeCountSum;
 }
@@ -33,7 +38,7 @@ Edge* Node::getParentEdge() const {
     return this->_parentEdge;
 }
 
-std::unordered_map<int8_t, Edge*>* Node::getChildEdges() {
+std::map<int8_t, Edge*>* Node::getChildEdges() {
     return &this->_childEdges;
 }
 

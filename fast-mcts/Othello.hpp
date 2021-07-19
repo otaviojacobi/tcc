@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <vector>
-#include <unordered_set>
 
 #include <torch/torch.h>
 
@@ -51,19 +50,20 @@ private:
                         OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER, OUTER };
     int8_t _player= BLACK;
 
-    std::unordered_set<int8_t> _empties = std::unordered_set<int8_t> ({11, 12, 13, 14, 15, 16, 17, 18,
-                                                                         21, 22, 23, 24, 25, 26, 27, 28,
-                                                                         31, 32, 33, 34, 35, 36, 37, 38,
-                                                                         41, 42, 43,         46, 47, 48,
-                                                                         51, 52, 53,         56, 57, 58,
-                                                                         61, 62, 63, 64, 65, 66, 67, 68,
-                                                                         71, 72, 73, 74, 75, 76, 77, 78,
-                                                                         81, 82, 83, 84, 85, 86, 87, 88});
+    int8_t _empties[100] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+                            1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1,
+                            1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+                            0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1,
+                            1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1,
+                            1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+                            1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+                            0, 0, 0, 0, 0, 0, 0, 0, 0};
     void flip(int8_t move, int8_t direction);
     int8_t findBracket(int8_t square, int8_t direction) const;
     bool hasBracket(int8_t move) const;
 
     void setBoard(int8_t *newBoard);
     void setPlayer(int8_t newPlayer);
-    void setEmpties(std::unordered_set<int8_t> &newEmpties);
+    void setEmpties(int8_t *newEmpties);
+    
 };
