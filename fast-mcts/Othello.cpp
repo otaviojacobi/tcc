@@ -1,10 +1,5 @@
-#include <cstdint>
-#include <vector>
-#include <torch/torch.h>
-
 #include "Othello.hpp"
 
-#include <iostream>
 
 Othello::Othello() {}
 
@@ -22,22 +17,20 @@ void Othello::play(int8_t move) {
     this->_player *= -1;
 }
 
-std::vector<int8_t> Othello::moves(void) const {
+std::vector<int8_t> Othello::moves() const {
     std::vector<int8_t> moves;
-
 
     for (auto move: this->_empties) {
         if(this->hasBracket(move)) {
             moves.push_back(move);
         }
     }
-    
 
     return moves;
 }
 
 // Black wins on score > 0, White wins on score < 0, Draw on score == 0
-int8_t Othello::score(void) {
+int8_t Othello::score() {
     int8_t diff = 0;
 
     for(int8_t i = 0; i < 100; i++) {
@@ -48,7 +41,7 @@ int8_t Othello::score(void) {
     return diff;
 }
 
-torch::Tensor Othello::state(void) const {
+torch::Tensor Othello::state() const {
 
     torch::Tensor gameState = torch::zeros({3, 8, 8});
     int8_t array_index;
@@ -67,7 +60,7 @@ torch::Tensor Othello::state(void) const {
     return gameState;
 }
 
-void Othello::render(void) const {
+void Othello::render() const {
     
 
     for (int8_t i = 0; i < 8; i++) {
@@ -83,6 +76,26 @@ void Othello::render(void) const {
         }
         std::cout << std::endl;
     }
+}
+
+Game* Othello::copy() {
+    Othello* newGame = new Othello();
+
+    newGame->setBoard(this->_board);
+    newGame->setEmpties(this->_empties);
+    newGame->setPlayer(this->_player);
+
+    return (Game*) newGame;
+}
+
+//TODO: double check if this is working 
+int8_t Othello::moveToAction(int8_t move) const {
+    return move - 11 - (2 * ((int8_t)move/10 - 1));
+}
+
+//TODO: double check if this is working 
+int8_t Othello::actionToMove(int8_t action) const {
+    return (10 *(int8_t)floor(action / 8)) + 11 + action % 8;
 }
 
 /* PRIVATE STUFF */
@@ -118,4 +131,16 @@ bool Othello::hasBracket(int8_t move) const {
         if (this->findBracket(move, _OTHELLO_DIRECTIONS[i]) != -1) return true;
     }
     return false;
+}
+
+void Othello::setBoard(int8_t *newBoard) {
+    memcpy(this->_board, newBoard, 100);
+}
+
+void Othello::setPlayer(int8_t newPlayer) {
+    this->_player = newPlayer;
+}
+
+void Othello::setEmpties(std::unordered_set<int8_t> &newEmpties) {
+    this->_empties = newEmpties;
 }

@@ -1,49 +1,35 @@
-#include <cmath>
-
 #include "MCTS.hpp"
 
-
-Node::Node() {}
-
-double Node::getTotalCount() const {
-  return 1.2;
+MCTS::MCTS(Game *board) {
+    this->_root = new Node(board->copy());
 }
 
-Edge::Edge(double prior, Node *parentNode, Node *childNode) {
-    this->_prior = prior;
-    this->_valueSum = 0;
-    this->_actionValue = 0;
-    this->_count = 0;
+std::tuple<torch::Tensor, torch::Tensor, double> MCTS::run(uint16_t simulations, double T) {
 
-    this->_parentNode = parentNode;
-    this->_childNode = childNode;
+    Node* node;
+    double value;
+
+    for(uint16_t i = 0; i < simulations; i++) {
+
+        node = this->search();
+        value = node->expand();
+        node->backprop(value);
+    }
+
+    return this->_root->getStatePiZ(T);
 }
 
-Node* Edge::getParent(void) const {
-  return this->_parentNode;
+
+void MCTS::setNewHead(int8_t move) {
+    this->_root = this->_root->getChildEdges()->at(move)->getChild();
 }
 
-Node* Edge::getChild(void) const {
-  return this->_childNode;
-}
+Node* MCTS::search(void) {
+    Node* curNode = this->_root;
 
-void Edge::update(double value) {
-  this->_count++;
-  this->_valueSum += value;
+    while (curNode->isExpanded() && !curNode->isLeaf()) {
+        curNode = curNode->getHighestUCBChild();
+    }
 
-  this->_actionValue = this->_valueSum / this->_count;
-}
-
-double Edge::getCount(void) const {
-  return this->_count;
-}
-
-double Edge::getActionValue(void) const {
-  return this->_actionValue;
-}
-
-double Edge::ucb(double cputc) const {
-  double totalCount = this->_parentNode->getTotalCount();
-  double explorationTerm = (this->_prior * sqrt(totalCount)) / (1 + this->_count); // U(s, a)
-  return this->_actionValue + cputc * explorationTerm;
+    return curNode;
 }
