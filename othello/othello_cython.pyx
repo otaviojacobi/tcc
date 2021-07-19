@@ -33,7 +33,7 @@ cdef char[64] VALID_IDXS = [11, 12, 13, 14, 15, 16, 17, 18,
 
 
 cpdef char action_to_move(char action):
-    return (10 * action // 8) + 11
+    return (10 * (action // 8)) + 11 + (action % 8)
 
 cpdef char move_to_action(char move):
     return move - 11 - 2 * (move//10 - 1)
