@@ -7,6 +7,7 @@
 class Game
 {
 public:
+    virtual ~Game() {};
     virtual void                play(int8_t move)                 = 0;
     virtual std::vector<int8_t> moves()                     const = 0;
     virtual int8_t              score()                           = 0;

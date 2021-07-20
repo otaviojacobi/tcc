@@ -204,7 +204,7 @@ cdef class Node:
     def get_p_v(self):
         board = self.state.get_board_2d()
 
-        state_input = torch.from_numpy(board).unsqueeze(0).to(self.net.get_device(), dtype=torch.float)
+        state_input = board.unsqueeze(0).to(self.net.get_device(), dtype=torch.float)
 
         with torch.no_grad():
             p, v = self.net.forward(state_input)

@@ -3,7 +3,7 @@
 
 from libc.string cimport memcpy
 
-import numpy as np
+import torch
 
 cdef char OUTER = -2
 # DO NOT CHANGE EMTPY VALUE
@@ -135,7 +135,7 @@ cdef class Othello:
         return score
 
     def get_board_2d(self):
-        board_state = np.zeros((3,8,8))
+        board_state = torch.zeros((3,8,8))
 
         for valid_idx in range(64):
             array_index = VALID_IDXS[valid_idx]

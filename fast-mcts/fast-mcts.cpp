@@ -42,8 +42,7 @@ int main() {
 
     std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()/1000.0 << "[s]" << std::endl;
 
+    delete othello;
+    delete mcts;
 
 }
-
-
-

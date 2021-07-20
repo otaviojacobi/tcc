@@ -14,8 +14,10 @@ void Edge::clear() {
 
     std::stack<Node*> theStack;
 
-    Node* curNode = this->_parentNode;
+    Node* curNode = this->_childNode;
     Node* tmpNode;
+
+    std::map<int8_t, Edge*>* parentEdges;
 
 
     while(curNode != NULL || !theStack.empty()) {
@@ -30,16 +32,41 @@ void Edge::clear() {
 
             continue;
         }
-        tmpNode = theStack.pop();
+        tmpNode = theStack.top();
+        theStack.pop();
 
-        auto parentEdges = tmpNode->getParentEdge()->getParent()->getChildEdges();
-        parentEdges->erase(parentEdges->begin());
+        if (tmpNode->getParentEdge() != NULL) {
+            
 
-        delete tmpNode->getParentEdge();
+            parentEdges = tmpNode->getParentEdge()->getParent()->getChildEdges();
+            parentEdges->erase(parentEdges->begin());
+
+            delete tmpNode->getParentEdge();
+        }
+
         delete tmpNode;
 
-    }
+        while(!theStack.empty() && theStack.top()->getChildEdges()->empty()) {
 
+
+            tmpNode = theStack.top();
+            theStack.pop();
+
+            if (tmpNode->getParentEdge() != NULL) {
+                parentEdges = tmpNode->getParentEdge()->getParent()->getChildEdges();
+                parentEdges->erase(parentEdges->begin());
+
+                delete tmpNode->getParentEdge();
+            }
+            delete tmpNode;
+        }
+
+        if(!theStack.empty()) {
+
+            curNode = theStack.top();
+            theStack.pop();
+        }
+    }
 }
 
 Node* Edge::getParent() const {

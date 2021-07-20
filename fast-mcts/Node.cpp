@@ -2,7 +2,7 @@
 
 Node::Node(Game *board) {
     this->_board = board;
-    this->_parentEdge = nullptr;
+    this->_parentEdge = NULL;
 
     this->_isExpanded = false;
 
@@ -15,7 +15,6 @@ Node::Node(Game *board) {
 
 Node::~Node() {
     delete this->_board;
-
 }
 
 double Node::getTotalCount() const {
@@ -100,7 +99,7 @@ double Node::expand() {
 void Node::backprop(double value){
     Edge* curEdge = this->_parentEdge;
 
-    while (curEdge != nullptr) {
+    while (curEdge != NULL) {
         value = -1 * value;
         curEdge->update(value);
         curEdge = curEdge->getParent()->getParentEdge();

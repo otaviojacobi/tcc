@@ -81,6 +81,7 @@ private:
 class MCTS {
 public:
     MCTS(Game *board);
+    ~MCTS();
     std::tuple<torch::Tensor, torch::Tensor, double> run(uint16_t simulations, double T);
     void setNewHead(int8_t move);
 
