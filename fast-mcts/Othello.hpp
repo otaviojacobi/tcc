@@ -35,6 +35,7 @@ public:
     torch::Tensor state(void) const;
     void render(void) const;
     Game* copy();
+    int8_t player() const;
 
     int8_t actionToMove(int8_t action) const;
     int8_t moveToAction(int8_t move) const;
@@ -65,5 +66,5 @@ private:
     void setBoard(int8_t *newBoard);
     void setPlayer(int8_t newPlayer);
     void setEmpties(int8_t *newEmpties);
-    
+
 };

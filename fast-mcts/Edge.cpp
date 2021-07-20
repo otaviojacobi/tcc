@@ -96,6 +96,17 @@ double Edge::getActionValue() const {
 
 double Edge::ucb(double cpuct) const {
     double totalCount = this->_parentNode->getTotalCount();
-    double explorationTerm = (this->_prior * sqrt(totalCount)) / (1 + this->_count); // U(s, a)
+
+    //double explorationTerm = (this->_prior * sqrt(totalCount)) / (1 + this->_count); // U(s, a)
+    double explorationTerm = sqrt(2 * log(totalCount)/(1+this->_count));
     return this->_actionValue + cpuct * explorationTerm;
+}
+
+void Edge::info() const {
+    std::cout << "P(s, a)" << this->_prior << std::endl;
+    std::cout << "Q(s, a)" << this->_actionValue << std::endl; 
+    std::cout << "N(s, a)" << this->_count << std::endl; 
+    std::cout << "W(s, a)" << this->_valueSum << std::endl; 
+    std::cout << "UCB" << this->ucb(10) << std::endl; 
+
 }

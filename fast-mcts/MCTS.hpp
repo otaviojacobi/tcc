@@ -11,6 +11,9 @@
 
 #include "Game.hpp"
 
+#define SIMULATED_MCTS 0
+#define ALPHA_MCTS     1
+
 class Node;
 
 class Edge {
@@ -23,6 +26,7 @@ public:
     double getCount() const;
     double getActionValue() const;
     double ucb(double c) const;
+    void info() const;
 
 private:
     double _prior;            // P(s, a)
@@ -55,7 +59,11 @@ public:
     void backprop(double value);
 
     std::tuple<torch::Tensor, torch::Tensor, double> getStatePiZ(double T) const;
+    int8_t getMostVisitedChild() const;
 
+    void info() const;
+
+    Game* getBoard() const;
 
 private:
     Game* _board;
@@ -63,7 +71,6 @@ private:
     std::map<int8_t, Edge*> _childEdges;
 
     std::vector<int8_t> _moves;
-
 
     bool _isLeaf;
     bool _isExpanded;
@@ -74,7 +81,13 @@ private:
     torch::Tensor _statePriors;
     double _stateValue;
 
-    void evaluate_p_v();
+    uint8_t _executionType;
+
+    void evaluatePV();
+    double runRandomSimulation();
+
+    double evaluateBySimulations();
+    double evaluateByNeuralNet();
 };
 
 
@@ -82,7 +95,10 @@ class MCTS {
 public:
     MCTS(Game *board);
     ~MCTS();
+
     std::tuple<torch::Tensor, torch::Tensor, double> run(uint16_t simulations, double T);
+    int8_t run(uint16_t simulations);
+
     void setNewHead(int8_t move);
 
 private:

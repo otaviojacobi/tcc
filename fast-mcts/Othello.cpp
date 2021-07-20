@@ -87,6 +87,10 @@ Game* Othello::copy() {
     return (Game*) newGame;
 }
 
+int8_t Othello::player() const {
+    return this->_player;
+}
+
 //TODO: double check if this is working 
 int8_t Othello::moveToAction(int8_t move) const {
     return move - 11 - (2 * ((int8_t)move/10 - 1));

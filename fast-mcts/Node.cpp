@@ -1,4 +1,5 @@
 #include "MCTS.hpp"
+#include "Othello.hpp"
 
 Node::Node(Game *board) {
     this->_board = board;
@@ -11,6 +12,8 @@ Node::Node(Game *board) {
     this->_isLeaf = this->_moves.empty(); 
 
     this->_edgeCountSum = 0;
+
+    this->_executionType = SIMULATED_MCTS;
 }
 
 Node::~Node() {
@@ -69,38 +72,24 @@ Node* Node::getHighestUCBChild() const {
 }
 
 double Node::expand() {
-
-    this->evaluate_p_v();
-
-    Game *board;
-    Node *newNode;
-    Edge *newEdge;
-
-    int8_t action;
-
-    for (auto& move : this->_moves) {
-
-        board = this->_board->copy();
-        board->play(move);
-
-        action = board->moveToAction(move);
-        newNode = new Node(board);
-        newEdge = new Edge(this->_statePriors[action].item<double>(), this, newNode);
-
-        newNode->setParentEdge(newEdge);
-
-        this->_childEdges[move] = newEdge;
+    if(this->_executionType == ALPHA_MCTS) {
+        return this->evaluateByNeuralNet();
+    } else if (this->_executionType == SIMULATED_MCTS) {
+        return this->evaluateBySimulations();
     }
-
-    this->_isExpanded = true;
-
-    return this->_stateValue;
+    //std::cout << "Tried to expand node with invalid execution type " << this->_executionType << std::endl;
+    exit(EXIT_FAILURE);
 }
 void Node::backprop(double value){
     Edge* curEdge = this->_parentEdge;
 
     while (curEdge != NULL) {
-        value = -1 * value;
+
+        if(this->_executionType == ALPHA_MCTS) {
+            value = -1 * value;
+        } else if(this->_executionType == SIMULATED_MCTS) {
+            value = value == 1.0 ? 0.0 : 1.0;
+        }
         curEdge->update(value);
         curEdge = curEdge->getParent()->getParentEdge();
     }
@@ -135,7 +124,7 @@ std::tuple<torch::Tensor, torch::Tensor, double> Node::getStatePiZ(double T) con
     return std::make_tuple(this->_state, pi, z);
 }
 
-void Node::evaluate_p_v(void) {
+void Node::evaluatePV(void) {
     this->_state = this->_board->state();
 
     //TODO: with no autograd, evaluate neural net
@@ -144,4 +133,125 @@ void Node::evaluate_p_v(void) {
 
     this->_statePriors = p;
     this->_stateValue = v.item<double>();
+}
+
+double Node::evaluateBySimulations() {
+    double won = this->runRandomSimulation();
+
+    Game *board;
+    Node *newNode;
+    Edge *newEdge;
+
+    for (auto& move : this->_moves) {
+
+        board = this->_board->copy();
+        board->play(move);
+
+        newNode = new Node(board);
+        newEdge = new Edge(0, this, newNode);
+
+        newNode->setParentEdge(newEdge);
+
+        this->_childEdges[move] = newEdge;
+    }
+
+    this->_edgeCountSum += 1;
+    this->_isExpanded = true;
+
+    return won;
+}
+
+double Node::runRandomSimulation() {
+    Game *simulationBoard = this->_board->copy();
+    auto moves = this->_moves;
+    int8_t move;
+
+
+    //std::cout << "will start random sim" << std::endl;
+    while(!moves.empty()) {
+        move = moves[rand() % moves.size()];
+        simulationBoard->play(move);
+        moves = simulationBoard->moves();
+    }
+
+    auto score = simulationBoard->score();
+    auto player = this->_board->player();
+
+    delete simulationBoard;
+
+    //std::cout << "finished random sim " << (int)score << std::endl;
+
+    // TOOD: remove black and white
+    // Black won
+    if(score > 0) {
+        if(player == BLACK) {
+            return 1.0;
+        } else {
+            return 0.0;
+        }
+    // White won
+    } else {
+        if(player == WHITE) {
+            return 1.0;
+        } else {
+            return 0.0;
+        }
+    }
+}
+
+double Node::evaluateByNeuralNet() {
+    this->evaluatePV();
+
+    Game *board;
+    Node *newNode;
+    Edge *newEdge;
+
+    int8_t action;
+
+    for (auto& move : this->_moves) {
+
+        board = this->_board->copy();
+        board->play(move);
+
+        action = board->moveToAction(move);
+        newNode = new Node(board);
+        newEdge = new Edge(this->_statePriors[action].item<double>(), this, newNode);
+
+        newNode->setParentEdge(newEdge);
+
+        this->_childEdges[move] = newEdge;
+    }
+    this->_edgeCountSum += 1;
+    this->_isExpanded = true;
+
+    return this->_stateValue;
+}
+
+int8_t Node::getMostVisitedChild() const {
+    uint8_t mostVisitedMove;
+    uint8_t higherCount = 0;
+
+    //std::cout << "I am here" << std::endl; 
+    for(auto &edge : this->_childEdges) {
+        auto count = edge.second->getCount();
+        if(count > higherCount) {
+            mostVisitedMove = edge.first;
+            higherCount = count;
+        }
+    }
+    //std::cout << "I am there " << (int) mostVisitedMove << std::endl; 
+
+    return mostVisitedMove;
+}
+
+void Node::info() const {
+    //std::cout << "will display " << this->_childEdges.size() << std::endl;
+    for(auto &edge : this->_childEdges) {
+        std::cout << (int)edge.first << std::endl;
+        edge.second->info();
+    }
+}
+
+Game* Node::getBoard() const {
+    return this->_board;
 }

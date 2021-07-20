@@ -13,6 +13,7 @@ file(GLOB SOURCES
 )
 
 add_executable(fast-mcts ${SOURCES})
-
 target_link_libraries(fast-mcts "${TORCH_LIBRARIES}")
-set_property(TARGET fast-mcts PROPERTY CXX_STANDARD 14)
+set_property(TARGET fast-mcts PROPERTY CXX_STANDARD 20)
+
+
