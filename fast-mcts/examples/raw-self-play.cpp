@@ -21,14 +21,12 @@
 
 int main() {
 
-    Game *othello = new Othello();
-
-    MCTS *mcts = new MCTS(othello);
-
     srand(time(NULL));
 
-    std::vector<int8_t> moves;
+    Game *othello = new Othello();
+    MCTS *mcts = new MCTS(othello);
 
+    std::vector<int8_t> moves;
     int8_t move;
 
     while(true) {
@@ -58,7 +56,6 @@ int main() {
     }
 
     othello->render();
-
 
     delete othello;
     delete mcts;
