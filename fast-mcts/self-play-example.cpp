@@ -1,3 +1,4 @@
+/*
 #include <torch/torch.h>
 #include <iostream>
 #include <chrono>
@@ -30,11 +31,11 @@ int main() {
 
     auto score = othello->score();
     if(score == 0) {
-        std::count << "DRAW ! " << (int)score  << std::endl;
+        std::cout << "DRAW ! " << (int)score  << std::endl;
     } else if(score > 0) {
-        std::count << "BLACK WON ! " << (int)score  << std::endl;
+        std::cout << "BLACK WON ! " << (int)score  << std::endl;
     } else {
-        std::count << "WHITE WON ! " << (int)score  << std::endl;
+        std::cout << "WHITE WON ! " << (int)score  << std::endl;
     }
 
     othello->render();
@@ -43,3 +44,4 @@ int main() {
     delete othello;
     delete mcts;
 }
+*/
