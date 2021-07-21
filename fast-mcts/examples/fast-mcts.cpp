@@ -6,15 +6,33 @@
 #include <cstdlib>
 
 #include "AlphaNet.hpp"
+#include "Othello.hpp"
+#include "MCTS.hpp"
+
 
 int main() {
 
-    auto convBlock = std::make_shared<ConvolutionalBlock>(3);
-    auto resLayer = std::make_shared<ResidualBlock>(9);
+    auto features = 3;
+    auto amtResidualBlocks = 9;
+    auto actionSpace = 64;
 
-    auto x = torch::ones({1, 3, 8, 8});
-    auto y = convBlock->forward(x);
-    auto z = resLayer->forward(y);
 
-    std::cout << z << std::endl;
+    auto net = AlphaNet(features, amtResidualBlocks, actionSpace);
+    
+    Game *othello = new Othello();
+    MCTS *mcts = new MCTS(othello, net);
+
+    auto out = mcts->run(100, 1.0);
+
+    std::cout << "s" << std::endl;
+    std::cout << std::get<0>(out) << std::endl;
+    std::cout << "pi" << std::endl;
+    std::cout << std::get<1>(out) << std::endl;
+    std::cout << "z" << std::endl;
+    std::cout << std::get<2>(out) << std::endl;
+
+
+
+    delete othello;
+    delete mcts;    
 }

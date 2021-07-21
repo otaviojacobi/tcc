@@ -2,7 +2,7 @@
 
 ConvolutionalBlock::ConvolutionalBlock(int64_t features) :
     conv(register_module("conv", nn::Conv2d(nn::Conv2dOptions(features, CONVOLUTIONAL_FILTERS, 3).padding(1)))),
-    bn(register_module("bn", nn::BatchNorm2d(nn::BatchNorm2d(CONVOLUTIONAL_FILTERS))))
+    bn(register_module("bn", nn::BatchNorm2d(nn::BatchNorm2dOptions(CONVOLUTIONAL_FILTERS))))
     {}
 
 Tensor ConvolutionalBlock::forward(Tensor x) {
@@ -14,10 +14,10 @@ ResidualBlock::ResidualBlock(int64_t amountBlocks) : blocks() {
     this->_amountBlocks = amountBlocks;
     for(int64_t i = 0; i < this->_amountBlocks; i++) {
         blocks->push_back(nn::Conv2d(nn::Conv2dOptions(CONVOLUTIONAL_FILTERS, CONVOLUTIONAL_FILTERS, 3).padding(1)));
-        blocks->push_back(nn::BatchNorm2d(nn::BatchNorm2d(CONVOLUTIONAL_FILTERS)));
+        blocks->push_back(nn::BatchNorm2d(nn::BatchNorm2dOptions(CONVOLUTIONAL_FILTERS)));
         blocks->push_back(nn::ReLU(nn::ReLUOptions().inplace(true)));
         blocks->push_back(nn::Conv2d(nn::Conv2dOptions(CONVOLUTIONAL_FILTERS, CONVOLUTIONAL_FILTERS, 3).padding(1)));
-        blocks->push_back(nn::BatchNorm2d(nn::BatchNorm2d(CONVOLUTIONAL_FILTERS)));
+        blocks->push_back(nn::BatchNorm2d(nn::BatchNorm2dOptions(CONVOLUTIONAL_FILTERS)));
     }
     register_module("blocks", blocks);
 }
@@ -38,9 +38,51 @@ Tensor ResidualBlock::forward(Tensor x) {
     return out;
 }
 
-/*
-AlphaNet::AlphaNet(){}
-Tensor AlphaNet::forward(Tensor x) {
-    return x;
+
+PolicyHead::PolicyHead(int64_t actionSpace) :
+    conv(register_module("conv", nn::Conv2d(nn::Conv2dOptions(CONVOLUTIONAL_FILTERS, 2, 1)))),
+    bn(register_module("bn", nn::BatchNorm2d(nn::BatchNorm2dOptions(2)))),
+    fc(register_module("fc", nn::Linear(2 * actionSpace, actionSpace)))
+
+{
+    this->_actionSpace = actionSpace;
 }
-*/
+Tensor PolicyHead::forward(Tensor x)
+{
+    x = F::relu(bn(conv(x)), F::ReLUFuncOptions().inplace(true));
+    x = x.view({-1, 2 * this->_actionSpace});
+
+    return F::softmax(fc(x), F::SoftmaxFuncOptions(1));
+}
+
+ValueHead::ValueHead(int64_t actionSpace) :
+    conv(register_module("conv", nn::Conv2d(nn::Conv2dOptions(CONVOLUTIONAL_FILTERS, 2, 1)))),
+    bn(register_module("bn", nn::BatchNorm2d(nn::BatchNorm2dOptions(2)))),
+    fc1(register_module("fc1", nn::Linear(2 * actionSpace, 256))),
+    fc2(register_module("fc2", nn::Linear(256, 1)))
+{
+    this->_actionSpace = actionSpace;
+}
+Tensor ValueHead::forward(Tensor x) {
+    x = F::relu(bn(conv(x)), F::ReLUFuncOptions());
+    x = x.view({-1, 2 * this->_actionSpace});
+    x = F::relu(fc1(x), F::ReLUFuncOptions().inplace(true));
+    return torch::tanh(fc2(x));
+}
+
+AlphaNet::AlphaNet(int64_t inputFeatures, int64_t residualBlocks, int64_t actionSpace) :
+    convBlock(register_module<ConvolutionalBlock>("convBlock", std::make_shared<ConvolutionalBlock>(inputFeatures))),
+    residualBlock(register_module<ResidualBlock>("residualBlock", std::make_shared<ResidualBlock>(residualBlocks))),
+    policyHead(register_module<PolicyHead>("policyHead", std::make_shared<PolicyHead>(actionSpace))),
+    valueHead(register_module<ValueHead>("valueHead", std::make_shared<ValueHead>(actionSpace)))
+{
+
+}
+std::pair<Tensor, Tensor> AlphaNet::forward(Tensor x) {
+    x = residualBlock->forward(convBlock->forward(x));
+    
+    Tensor p = policyHead->forward(x);
+    Tensor v = valueHead->forward(x);
+
+    return std::make_pair(p, v);
+}

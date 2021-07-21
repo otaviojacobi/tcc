@@ -4,6 +4,10 @@ MCTS::MCTS(Game *board) {
     this->_root = new Node(board->copy());
 }
 
+MCTS::MCTS(Game *board, AlphaNet &net) {
+    this->_root = new Node(board->copy(), net);
+}
+
 MCTS::~MCTS() {
 
     auto edges = this->_root->getChildEdges();
@@ -57,7 +61,7 @@ void MCTS::setNewHead(int8_t move) {
     keys.reserve(edges->size());
     Node *nextHead;
 
-    bool hasNextHead = edges->contains(move);
+    bool hasNextHead = edges->count(move);;
 
     if(hasNextHead) {
         nextHead = edges->at(move)->getChild();;

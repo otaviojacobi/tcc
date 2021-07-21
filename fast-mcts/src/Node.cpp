@@ -1,19 +1,26 @@
 #include "MCTS.hpp"
 #include "Othello.hpp"
 
-Node::Node(Game *board) {
+auto dummy = AlphaNet(1,1,1);
+
+Node::Node(Game *board) : _net(dummy) {
     this->_board = board;
     this->_parentEdge = NULL;
-
     this->_isExpanded = false;
-
     this->_moves = board->moves();
-
     this->_isLeaf = this->_moves.empty(); 
-
     this->_edgeCountSum = 0;
-
     this->_executionType = SIMULATED_MCTS;
+}
+
+Node::Node(Game *board, AlphaNet &net) : _net(net) {
+    this->_board = board;
+    this->_parentEdge = NULL;
+    this->_isExpanded = false;
+    this->_moves = board->moves();
+    this->_isLeaf = this->_moves.empty(); 
+    this->_edgeCountSum = 0;
+    this->_executionType = ALPHA_MCTS;
 }
 
 Node::~Node() {
@@ -128,11 +135,17 @@ void Node::evaluatePV(void) {
     this->_state = this->_board->state();
 
     //TODO: with no autograd, evaluate neural net
-    torch::Tensor p = torch::ones({64, 1});
-    torch::Tensor v = torch::randn({1,1});
+    torch::NoGradGuard no_grad;
+    auto pv = this->_net.forward(this->_state);
 
-    this->_statePriors = p;
-    this->_stateValue = v.item<double>();
+    this->_statePriors = pv.first[0];
+    this->_stateValue = pv.second.item<double>();
+
+    std::cout << "Priors" << std::endl;
+    std::cout << this->_statePriors << std::endl;
+    std::cout << "Value" << std::endl;
+    std::cout << this->_stateValue << std::endl;
+
 }
 
 double Node::evaluateBySimulations() {
@@ -154,7 +167,6 @@ double Node::evaluateBySimulations() {
 
         this->_childEdges[move] = newEdge;
     }
-
     this->_edgeCountSum += 1;
     this->_isExpanded = true;
 
@@ -214,7 +226,7 @@ double Node::evaluateByNeuralNet() {
         board->play(move);
 
         action = board->moveToAction(move);
-        newNode = new Node(board);
+        newNode = new Node(board, this->_net);
         newEdge = new Edge(this->_statePriors[action].item<double>(), this, newNode);
 
         newNode->setParentEdge(newEdge);

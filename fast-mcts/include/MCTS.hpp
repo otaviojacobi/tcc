@@ -10,6 +10,7 @@
 #include <torch/torch.h>
 
 #include "Game.hpp"
+#include "AlphaNet.hpp"
 
 #define SIMULATED_MCTS 0
 #define ALPHA_MCTS     1
@@ -41,6 +42,9 @@ private:
 class Node {
 public:
     Node(Game *board);
+    Node(Game *board, AlphaNet &net);
+
+
     ~Node();
     double getTotalCount() const;
     bool isExpanded() const;
@@ -83,6 +87,8 @@ private:
 
     uint8_t _executionType;
 
+    AlphaNet &_net;
+
     void evaluatePV();
     double runRandomSimulation();
 
@@ -94,6 +100,8 @@ private:
 class MCTS {
 public:
     MCTS(Game *board);
+    MCTS(Game *board, AlphaNet &net);
+
     ~MCTS();
 
     std::tuple<torch::Tensor, torch::Tensor, double> run(uint16_t simulations, double T);
