@@ -24,6 +24,7 @@ ResidualBlock::ResidualBlock(int64_t amountBlocks) : blocks() {
 Tensor ResidualBlock::forward(Tensor x) {
 
     auto out = x.clone();
+    out = out.to(x.device());
 
     for(int64_t i = 0; i < this->_amountBlocks ; i++) {
         out = blocks[i*5]->as<nn::Conv2d>()->forward(out);

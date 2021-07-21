@@ -84,15 +84,12 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> ReplayBuffer::sample(lon
 
     RandomIterator iterator(size, 0, _curlen-1);
 
-
     torch::Tensor S = torch::zeros({size, 3, 8, 8});
     torch::Tensor PI = torch::zeros({size, 64});
-    torch::Tensor Z = torch::zeros({64});
+    torch::Tensor Z = torch::zeros({size});
 
-
-    long counter = 0;
-    while(iterator.has_next())
-    {   
+    for(long counter = 0; counter < size; counter++)
+    {
         unsigned long long idx = iterator.next() - 1;
         auto s = std::get<0>(*memory[idx]);
         auto pi = std::get<1>(*memory[idx]);
@@ -101,8 +98,6 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> ReplayBuffer::sample(lon
         S[counter] = s[0];
         PI[counter] = pi;
         Z[counter] = z;
-
-        counter++;
     }
 
     return std::make_tuple(S, PI, Z);
