@@ -2,14 +2,17 @@ from othello_cython import Othello, move_to_action
 from alpha_search import MCTS
 from random import choices
 from NeuralNet import NeuralNet
+from ReplayMemory import ReplayMemory
 
 import time
 
-env = Othello()
-m = MCTS(env, NeuralNet())
-counter = 0
 
+counter = 0
+memory = ReplayMemory(50000)
 start_time = time.time()
+
+env = Othello()
+m = MCTS(env, NeuralNet("cpu"))
 
 while True:
 
@@ -17,7 +20,9 @@ while True:
     if len(possible_moves) == 0:
         break
 
-    s, pi, z = m.run(200, 1.0)
+    s, pi, z = m.run(100, 1.0)
+
+    memory.push(s, pi, z)
 
     distr = [pi[move_to_action(move)] for move in possible_moves]
     move = choices(possible_moves, distr)[0]

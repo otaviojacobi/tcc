@@ -102,7 +102,7 @@ void Node::backprop(double value){
     }
 }
 
-std::tuple<torch::Tensor, torch::Tensor, double> Node::getStatePiZ(double T) const {
+SPiZTuple Node::getStatePiZ(double T) const {
 
     double temperature = 1/T;
     double z = 0;

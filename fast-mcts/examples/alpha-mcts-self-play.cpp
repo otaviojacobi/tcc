@@ -8,6 +8,7 @@
 #include "AlphaNet.hpp"
 #include "Othello.hpp"
 #include "MCTS.hpp"
+#include "ReplayBuffer.hpp"
 
 
 int main() {
@@ -19,10 +20,11 @@ int main() {
     auto net = std::make_shared<AlphaNet>(features, amtResidualBlocks, actionSpace);
     std::vector<int8_t> possibleMoves;
 
-    std::tuple<torch::Tensor, torch::Tensor, double> SPiZ;
     torch::Tensor pi;
     int8_t action;
     int8_t move;
+
+    auto buffer = std::make_shared<ReplayBuffer>(50000);
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     Game *env = new Othello();
@@ -32,8 +34,10 @@ int main() {
 
         if(possibleMoves.empty()) break;
 
-        SPiZ = mcts->run(100, 1.0);
+        auto SPiZ = mcts->run(100, 1.0);
         pi = std::get<1>(SPiZ);
+
+        buffer->push(std::make_shared<SPiZTuple>(SPiZ));
 
         action = torch::multinomial(pi, 1).item<int8_t>();
         move = env->actionToMove(action);

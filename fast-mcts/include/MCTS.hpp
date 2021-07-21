@@ -15,6 +15,8 @@
 #define SIMULATED_MCTS 0
 #define ALPHA_MCTS     1
 
+#define SPiZTuple std::tuple<torch::Tensor, torch::Tensor, double>
+
 class Node;
 
 class Edge {
@@ -62,7 +64,7 @@ public:
     double expand();
     void backprop(double value);
 
-    std::tuple<torch::Tensor, torch::Tensor, double> getStatePiZ(double T) const;
+    SPiZTuple getStatePiZ(double T) const;
     int8_t getMostVisitedChild() const;
 
     void info() const;
@@ -106,7 +108,7 @@ public:
 
     ~MCTS();
 
-    std::tuple<torch::Tensor, torch::Tensor, double> run(uint16_t simulations, double T);
+    SPiZTuple run(uint16_t simulations, double T);
     int8_t run(uint16_t simulations);
 
     void setNewHead(int8_t move);

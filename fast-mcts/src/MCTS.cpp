@@ -25,7 +25,7 @@ MCTS::~MCTS() {
     delete this->_root;
 }
 
-std::tuple<torch::Tensor, torch::Tensor, double> MCTS::run(uint16_t simulations, double T) {
+SPiZTuple MCTS::run(uint16_t simulations, double T) {
 
     Node* node;
     double value;
