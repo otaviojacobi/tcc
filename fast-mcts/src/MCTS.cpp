@@ -4,7 +4,7 @@ MCTS::MCTS(Game *board) {
     this->_root = new Node(board->copy());
 }
 
-MCTS::MCTS(Game *board, std::shared_ptr<AlphaNet> net) {
+MCTS::MCTS(Game *board, std::shared_ptr<AlphaNet> net) : _net(net) {
     this->_root = new Node(board->copy(), net);
 }
 
@@ -86,7 +86,11 @@ void MCTS::setNewHead(int8_t move) {
     } else {
         auto newBoard = this->_root->getBoard()->copy();
         newBoard->play(move);
-        nextHead = new Node(newBoard);
+        if(this->_root->getExecutionType() == SIMULATED_MCTS) {
+            nextHead = new Node(newBoard);
+        } else if(this->_root->getExecutionType() == ALPHA_MCTS){
+            nextHead = new Node(newBoard, this->_net);
+        }
         delete this->_root;
         this->_root = nextHead;
     }

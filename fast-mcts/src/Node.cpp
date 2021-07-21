@@ -261,3 +261,7 @@ void Node::info() const {
 Game* Node::getBoard() const {
     return this->_board;
 }
+
+uint8_t Node::getExecutionType() const {
+    return this->_executionType;
+}

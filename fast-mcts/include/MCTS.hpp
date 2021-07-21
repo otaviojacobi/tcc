@@ -69,6 +69,8 @@ public:
 
     Game* getBoard() const;
 
+    uint8_t getExecutionType() const;
+
 private:
     Game* _board;
     Edge* _parentEdge;
@@ -112,4 +114,6 @@ public:
 private:
     Node* _root;
     Node *search();
+
+    std::shared_ptr<AlphaNet> _net;
 };
