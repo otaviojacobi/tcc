@@ -23,7 +23,7 @@ foreach(_exampleFile ${EXAMPLES})
 
     add_executable(${executableName} ${_exampleFile} ${SOURCES})
     target_link_libraries(${executableName} "${TORCH_LIBRARIES}" "${BOOST_LIBRARIES}")
-    set_property(TARGET ${executableName} PROPERTY CXX_STANDARD 20)
+    set_property(TARGET ${executableName} PROPERTY CXX_STANDARD 17)
 endforeach()
 
 

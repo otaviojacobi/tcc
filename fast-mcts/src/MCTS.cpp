@@ -48,7 +48,6 @@ int8_t MCTS::run(uint16_t simulations) {
         node = this->search();
         value = node->expand();
         node->backprop(value);
-        //this->_root->info();
     }
 
     return this->_root->getMostVisitedChild();

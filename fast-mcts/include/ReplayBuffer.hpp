@@ -1,9 +1,11 @@
 #pragma once
 
-#include "MCTS.hpp"
+#include <cmath>
 #include <torch/torch.h>
-
 #include <boost/circular_buffer.hpp>
+
+#include "MCTS.hpp"
+
 
 class ReplayBuffer {
 public:
@@ -11,7 +13,11 @@ public:
     ~ReplayBuffer();
 
     void push(std::shared_ptr<SPiZTuple> element);
-    std::pair<torch::Tensor, torch::Tensor> sample(uint64_t size);
+    std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> sample(long size);
 
+private:
     boost::circular_buffer<std::shared_ptr<SPiZTuple>> memory;
+    uint64_t _maxlen;
+    uint64_t _curlen;
+
 };
