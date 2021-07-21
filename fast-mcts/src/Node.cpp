@@ -3,7 +3,7 @@
 
 auto dummy = AlphaNet(1,1,1);
 
-Node::Node(Game *board) : _net(dummy) {
+Node::Node(Game *board) {
     this->_board = board;
     this->_parentEdge = NULL;
     this->_isExpanded = false;
@@ -13,7 +13,7 @@ Node::Node(Game *board) : _net(dummy) {
     this->_executionType = SIMULATED_MCTS;
 }
 
-Node::Node(Game *board, AlphaNet &net) : _net(net) {
+Node::Node(Game *board, std::shared_ptr<AlphaNet> net) : _net(net) {
     this->_board = board;
     this->_parentEdge = NULL;
     this->_isExpanded = false;
@@ -136,16 +136,10 @@ void Node::evaluatePV(void) {
 
     //TODO: with no autograd, evaluate neural net
     torch::NoGradGuard no_grad;
-    auto pv = this->_net.forward(this->_state);
+    auto pv = this->_net->forward(this->_state);
 
     this->_statePriors = pv.first[0];
     this->_stateValue = pv.second.item<double>();
-
-    std::cout << "Priors" << std::endl;
-    std::cout << this->_statePriors << std::endl;
-    std::cout << "Value" << std::endl;
-    std::cout << this->_stateValue << std::endl;
-
 }
 
 double Node::evaluateBySimulations() {

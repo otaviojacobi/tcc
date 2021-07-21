@@ -12,3 +12,5 @@ Makefile
 
 fast-mcts
 raw-self-play
+alpha-mcts-self-play
+original-mcts-self-play

@@ -4,7 +4,7 @@ MCTS::MCTS(Game *board) {
     this->_root = new Node(board->copy());
 }
 
-MCTS::MCTS(Game *board, AlphaNet &net) {
+MCTS::MCTS(Game *board, std::shared_ptr<AlphaNet> net) {
     this->_root = new Node(board->copy(), net);
 }
 

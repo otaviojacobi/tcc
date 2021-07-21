@@ -42,7 +42,7 @@ private:
 class Node {
 public:
     Node(Game *board);
-    Node(Game *board, AlphaNet &net);
+    Node(Game *board, std::shared_ptr<AlphaNet> net);
 
 
     ~Node();
@@ -87,7 +87,7 @@ private:
 
     uint8_t _executionType;
 
-    AlphaNet &_net;
+    std::shared_ptr<AlphaNet>_net;
 
     void evaluatePV();
     double runRandomSimulation();
@@ -100,7 +100,7 @@ private:
 class MCTS {
 public:
     MCTS(Game *board);
-    MCTS(Game *board, AlphaNet &net);
+    MCTS(Game *board, std::shared_ptr<AlphaNet> net);
 
     ~MCTS();
 
