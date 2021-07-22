@@ -76,11 +76,14 @@ ReplayBuffer::ReplayBuffer(uint64_t maxlen) : memory(maxlen), _maxlen(maxlen) {}
 ReplayBuffer::~ReplayBuffer() {}
 
 void ReplayBuffer::push(std::shared_ptr<SPiZTuple> element) {
+    _replayBufferAcces.lock();
     _curlen = std::min(_curlen+1, _maxlen);
     memory.push_back(element);
+    _replayBufferAcces.unlock();
 }
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> ReplayBuffer::sample(long size) {
+
 
     RandomIterator iterator(size, 0, _curlen-1);
 
@@ -103,6 +106,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> ReplayBuffer::sample(lon
     return std::make_tuple(S, PI, Z);
 }
 
+// Ideally we should also wrap this around the mutex
 uint64_t ReplayBuffer::getCurSize() {
     return _curlen;
 }

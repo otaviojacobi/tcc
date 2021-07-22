@@ -9,6 +9,9 @@
 
 #include <torch/torch.h>
 
+#include <thread>
+#include <mutex>
+
 #include "Game.hpp"
 #include "AlphaNet.hpp"
 
@@ -44,7 +47,7 @@ private:
 class Node {
 public:
     Node(Game *board);
-    Node(Game *board, std::shared_ptr<AlphaNet> net);
+    Node(Game *board, std::shared_ptr<LockedNet> net);
 
 
     ~Node();
@@ -61,7 +64,7 @@ public:
 
     Node* getHighestUCBChild() const;
 
-    double expand();
+    double expand(bool shouldAddNoise);
     void backprop(double value);
 
     std::tuple<torch::Tensor, torch::Tensor> getStatePi(double T) const;
@@ -91,20 +94,20 @@ private:
 
     uint8_t _executionType;
 
-    std::shared_ptr<AlphaNet>_net;
+    std::shared_ptr<LockedNet>_net;
 
     void evaluatePV();
     double runRandomSimulation();
 
     double evaluateBySimulations();
-    double evaluateByNeuralNet();
+    double evaluateByNeuralNet(bool shouldAddNoise);
 };
 
 
 class MCTS {
 public:
     MCTS(Game *board);
-    MCTS(Game *board, std::shared_ptr<AlphaNet> net);
+    MCTS(Game *board, std::shared_ptr<LockedNet> net);
 
     ~MCTS();
 
@@ -117,5 +120,5 @@ private:
     Node* _root;
     Node* search();
 
-    std::shared_ptr<AlphaNet> _net;
+    std::shared_ptr<LockedNet> _net;
 };

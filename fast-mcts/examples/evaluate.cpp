@@ -7,6 +7,9 @@
 
 
 int main() {
+
+    srand(time(NULL));
+
     std::vector<int8_t> possibleMoves;
 
     torch::Tensor pi;
@@ -16,6 +19,8 @@ int main() {
     auto net = std::make_shared<LockedNet>(3, 9, 64);
     std::tuple<torch::Tensor, torch::Tensor> SPi;
 
+    torch::load(net, "tmp.pt");
+
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     Game *env = new Othello();
@@ -24,7 +29,6 @@ int main() {
     uint64_t counter = 0;
     while(true) {
         possibleMoves = env->moves();
-
         if(possibleMoves.empty()) break;
 
         SPi = mcts->run(100, 1.0);
@@ -38,11 +42,26 @@ int main() {
         mcts->setNewHead(move);
 
         counter++;
+
+        possibleMoves = env->moves();
+        if(possibleMoves.empty()) break;
+
+        move = possibleMoves[rand() % possibleMoves.size()];
+
+        env->play(move);
+        mcts->setNewHead(move);
+
+        counter++;
+
     }
 
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    env->render();
 
-    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()/1000.0 << "[s]" << std::endl;
+    if(env->score() > 0) {
+      std::cout << "Winner is BLACK with " << (int) env->score() << std::endl;
+    } else {
+      std::cout << "Winner is WHITE with " << (int)env->score() << std::endl;
+    }
 
     delete mcts;
     delete env;

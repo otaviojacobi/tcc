@@ -57,3 +57,15 @@ struct AlphaNet : nn::Module {
     std::shared_ptr<PolicyHead> policyHead;
     std::shared_ptr<ValueHead> valueHead;
 };
+
+struct LockedNet : nn::Module {
+    std::shared_ptr<AlphaNet> net;
+
+
+    LockedNet(int64_t inputFeatures, int64_t residualBlocks, int64_t actionSpace);
+    std::pair<Tensor, Tensor> forward(torch::Tensor x);
+
+    void lock();
+    void unlock();
+    std::mutex _netPass;
+};

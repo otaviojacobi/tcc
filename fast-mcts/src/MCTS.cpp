@@ -4,7 +4,7 @@ MCTS::MCTS(Game *board) {
     this->_root = new Node(board->copy());
 }
 
-MCTS::MCTS(Game *board, std::shared_ptr<AlphaNet> net) : _net(net) {
+MCTS::MCTS(Game *board, std::shared_ptr<LockedNet> net) : _net(net) {
     this->_root = new Node(board->copy(), net);
 }
 
@@ -33,7 +33,7 @@ std::tuple<torch::Tensor, torch::Tensor> MCTS::run(uint16_t simulations, double 
     for(uint16_t i = 0; i < simulations; i++) {
 
         node = this->search();
-        value = node->expand();
+        value = node->expand(i==0);
         node->backprop(value);
     }
 
@@ -46,7 +46,7 @@ int8_t MCTS::run(uint16_t simulations) {
 
     for(uint16_t i = 0; i < simulations; i++) {
         node = this->search();
-        value = node->expand();
+        value = node->expand(false);
         node->backprop(value);
     }
 

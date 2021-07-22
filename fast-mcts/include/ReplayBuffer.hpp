@@ -22,4 +22,6 @@ private:
     uint64_t _maxlen;
     uint64_t _curlen;
 
+    std::mutex _replayBufferAcces;
+
 };

@@ -15,24 +15,25 @@
 #define ACTION_SPACE 64
 
 #define MCTS_RUN_AMT 100
+#define TOTAL_GAMES 10000
 
 #define REPLAY_BUFFER_SIZE 100000
-#define BATCH_SIZE 2048
-#define LEARNING_RATE 1e-4
+#define BATCH_SIZE 1024
+#define LEARNING_RATE 2e-4
 #define L2_TERM 1e-4
-#define TOTAL_TRAINING_ITERATIONS 50
+#define BATCHES_FOR_UPDATE 700
+#define TOTAL_TRAINING_UPDATES 500
 
+#define MCTS_SIMS_THREADS 8
 
-void runSimulations(std::shared_ptr<AlphaNet> net, std::shared_ptr<ReplayBuffer> buffer, uint64_t iterations) {
+void runSimulations(std::shared_ptr<LockedNet> net, std::shared_ptr<ReplayBuffer> buffer, int threadId) {
 
     std::vector<int8_t> possibleMoves;
-    std::tuple<torch::Tensor, torch::Tensor> SPiForRun[60];
+    std::tuple<torch::Tensor, torch::Tensor> SPiForRun[62];
 
     torch::Tensor pi;
     int8_t action;
     int8_t move;
-
-    uint64_t totalTuplesAddedToBuffer = 0;
 
     std::chrono::steady_clock::time_point begin;
     std::chrono::steady_clock::time_point end;
@@ -40,7 +41,7 @@ void runSimulations(std::shared_ptr<AlphaNet> net, std::shared_ptr<ReplayBuffer>
 
     std::tuple<torch::Tensor, torch::Tensor> SPi;
 
-    for(uint64_t simulationIteration = 0; simulationIteration < iterations; simulationIteration++) {
+    for(uint64_t simulationIteration = 0; simulationIteration < TOTAL_GAMES; simulationIteration++) {
 
         begin = std::chrono::steady_clock::now();
         Game *env = new Othello();
@@ -81,16 +82,15 @@ void runSimulations(std::shared_ptr<AlphaNet> net, std::shared_ptr<ReplayBuffer>
             curPlayer = -1 * curPlayer; // TODO: make game interface provide a oponnent() function or somethhing
         }
 
-        totalTuplesAddedToBuffer += counter;
-
         end = std::chrono::steady_clock::now();
 
         std::printf(
-        "[SIMULATOR][%2ld/%2ld] new %2ld over(%2ld) sim_time[%lf s]\n",
+        "[SIMULATOR %d][%2ld/%2ld] new %2ld over(%2ld) sim_time[%lf s]\n",
+        threadId,
         simulationIteration,
-        iterations,
+        TOTAL_GAMES,
         counter,
-        totalTuplesAddedToBuffer,
+        buffer->getCurSize(),
         std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.0
         );
 
@@ -108,67 +108,105 @@ torch::Tensor alpha_loss(torch::Tensor p, torch::Tensor v, torch::Tensor pi, tor
     return (valueError - policyError).mean();
 }
 
-void runTraining(std::shared_ptr<AlphaNet> net, std::shared_ptr<ReplayBuffer> buffer, torch::Device trainingDevice, uint64_t totalIterations) {
+void runTraining(
+    std::shared_ptr<LockedNet> trainingNet,
+    std::shared_ptr<LockedNet> *inferenceNets,
+    std::shared_ptr<ReplayBuffer> buffer,
+    torch::Device trainingDevice,
+    torch::Device simulationDevice) {
 
-    if(BATCH_SIZE > buffer->getCurSize()) {
-        std::cout << "Batchsize is bigger then current buffer size, run more simulations" << std::endl;
+    while(BATCH_SIZE > buffer->getCurSize()) {
+        std::cout << "[TRAINER] Batchsize[" << BATCH_SIZE << "] is bigger then current buffer size[" << buffer->getCurSize() << "], run more simulations" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(10));
     }
 
-    net->to(trainingDevice);
-    torch::optim::Adam optimizer(net->parameters(), torch::optim::AdamOptions(LEARNING_RATE).weight_decay(L2_TERM));
+    std::cout << "The replay buffer size is " << buffer->getCurSize() << std::endl;
 
-    for(uint64_t trainingIteration = 0; trainingIteration < totalIterations; trainingIteration++) {
+    torch::optim::Adam optimizer(trainingNet->net->parameters(), torch::optim::AdamOptions(LEARNING_RATE).weight_decay(L2_TERM));
 
-        // TODO, sample directly from device
-        auto SPiZ = buffer->sample(BATCH_SIZE);
+    for(uint64_t updateIteration = 0; updateIteration < TOTAL_TRAINING_UPDATES; updateIteration++) {
+        trainingNet->net->to(trainingDevice);
+        double totalLossOnUpdate = 0.0;
+        for(uint64_t trainingIteration = 0; trainingIteration < BATCHES_FOR_UPDATE; trainingIteration++) {
 
-        auto S = std::get<0>(SPiZ);
-        auto Pi = std::get<1>(SPiZ);
-        auto Z = std::get<2>(SPiZ);
+            // TODO, sample directly from device
+            auto SPiZ = buffer->sample(BATCH_SIZE);
 
-        S=S.to(trainingDevice);
-        Pi=Pi.to(trainingDevice);
-        Z=Z.to(trainingDevice);
+            auto S = std::get<0>(SPiZ);
+            auto Pi = std::get<1>(SPiZ);
+            auto Z = std::get<2>(SPiZ);
 
-        auto PV = net->forward(S);
+            S=S.to(trainingDevice);
+            Pi=Pi.to(trainingDevice);
+            Z=Z.to(trainingDevice);
+            
 
-        auto P = std::get<0>(PV);
-        auto V = std::get<1>(PV);
+            auto PV = trainingNet->forward(S);
 
-        P=P.to(trainingDevice);
-        V=V.to(trainingDevice);
+            auto P = std::get<0>(PV);
+            auto V = std::get<1>(PV);
 
-        auto loss = alpha_loss(P, V, Pi, Z);
+            P=P.to(trainingDevice);
+            V=V.to(trainingDevice);
 
-        optimizer.zero_grad();
-        loss.backward();
-        optimizer.step();
+            auto loss = alpha_loss(P, V, Pi, Z);
+
+            optimizer.zero_grad();
+            loss.backward();
+            optimizer.step();
+
+            totalLossOnUpdate += loss.item<float>();
+        }
 
         std::printf(
         "[TRAINER][%2ld/%2ld] loss: %.4f\n",
-        trainingIteration,
-        totalIterations,
-        loss.item<float>());
+        updateIteration,
+        TOTAL_TRAINING_UPDATES,
+        totalLossOnUpdate/BATCHES_FOR_UPDATE
+        );
+
+        trainingNet->lock();
+        trainingNet->net->to(simulationDevice);
+        torch::save(trainingNet, "tmp.pt");
+        trainingNet->unlock();
+
+        for(int i = 0; i < MCTS_SIMS_THREADS; i++) {
+            inferenceNets[i]->lock();
+            torch::load(inferenceNets[i], "tmp.pt");
+            inferenceNets[i]->unlock();
+        }
     }
 }
 
-int main() {
 
-    auto inferenceNet = std::make_shared<AlphaNet>(FEATURES, AMT_RESIDUAL_BLOCKS, ACTION_SPACE);
-    auto trainingNet = std::make_shared<AlphaNet>(FEATURES, AMT_RESIDUAL_BLOCKS, ACTION_SPACE);
+int main() {
 
     auto buffer = std::make_shared<ReplayBuffer>(REPLAY_BUFFER_SIZE);
 
-    torch::Device cpuDevice(torch::kCPU);
+    torch::Device simulationDevice(torch::kCPU);
     torch::Device trainingDevice(torch::kCUDA);
 
-    for(uint32_t epoch = 0; epoch < 200; epoch++) {
-        runSimulations(inferenceNet, buffer, 20);
-        runTraining(trainingNet, buffer, trainingDevice, 100);
 
-        trainingNet->to(cpuDevice);
+    std::shared_ptr<LockedNet> simulationNets[MCTS_SIMS_THREADS];
+    std::thread simulationThreads[MCTS_SIMS_THREADS];
 
-        torch::save(trainingNet, "tmp.pt");
-        torch::load(inferenceNet, "tmp.pt");
+    for(int i = 0; i < MCTS_SIMS_THREADS; i++) {
+        simulationNets[i] = std::make_shared<LockedNet>(FEATURES, AMT_RESIDUAL_BLOCKS, ACTION_SPACE);
+        simulationThreads[i] = std::thread(runSimulations, simulationNets[i], buffer, i);
     }
+
+
+    auto trainingNet = std::make_shared<LockedNet>(FEATURES, AMT_RESIDUAL_BLOCKS, ACTION_SPACE);
+    std::thread trainingThread(runTraining, trainingNet, simulationNets, buffer, trainingDevice, simulationDevice);
+
+
+    for(int i = 0; i < MCTS_SIMS_THREADS; i++) {
+        simulationThreads[i].join();
+    }
+
+    trainingThread.join();
+
+    torch::save(trainingNet, "last.pt");
+
+
 }

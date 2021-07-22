@@ -39,7 +39,6 @@ Tensor ResidualBlock::forward(Tensor x) {
     return out;
 }
 
-
 PolicyHead::PolicyHead(int64_t actionSpace) :
     conv(register_module("conv", nn::Conv2d(nn::Conv2dOptions(CONVOLUTIONAL_FILTERS, 2, 1)))),
     bn(register_module("bn", nn::BatchNorm2d(nn::BatchNorm2dOptions(2)))),
@@ -86,4 +85,24 @@ std::pair<Tensor, Tensor> AlphaNet::forward(Tensor x) {
     Tensor v = valueHead->forward(x);
 
     return std::make_pair(p, v);
+}
+
+
+LockedNet::LockedNet(int64_t inputFeatures, int64_t residualBlocks, int64_t actionSpace) : 
+    net(register_module<AlphaNet>("alphanet", std::make_shared<AlphaNet>(inputFeatures, residualBlocks, actionSpace)))
+{}
+
+std::pair<Tensor, Tensor> LockedNet::forward(torch::Tensor x) {
+    _netPass.lock();
+    auto out = net->forward(x);
+    _netPass.unlock();
+    return out;
+}
+
+void LockedNet::lock() {
+    _netPass.lock();
+}
+
+void LockedNet::unlock() {
+    _netPass.unlock();
 }

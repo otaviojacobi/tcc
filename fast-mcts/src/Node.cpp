@@ -1,8 +1,7 @@
 #include "MCTS.hpp"
 #include "Othello.hpp"
 
-auto dummy = AlphaNet(1,1,1);
-
+torch::Tensor dirichlet_tensor = torch::ones({64}) * 0.3;
 Node::Node(Game *board) {
     this->_board = board;
     this->_parentEdge = NULL;
@@ -13,7 +12,7 @@ Node::Node(Game *board) {
     this->_executionType = SIMULATED_MCTS;
 }
 
-Node::Node(Game *board, std::shared_ptr<AlphaNet> net) : _net(net) {
+Node::Node(Game *board, std::shared_ptr<LockedNet> net) : _net(net) {
     this->_board = board;
     this->_parentEdge = NULL;
     this->_isExpanded = false;
@@ -78,9 +77,9 @@ Node* Node::getHighestUCBChild() const {
     return best_edge->getChild();
 }
 
-double Node::expand() {
+double Node::expand(bool shouldAddNoise) {
     if(this->_executionType == ALPHA_MCTS) {
-        return this->evaluateByNeuralNet();
+        return this->evaluateByNeuralNet(shouldAddNoise);
     } else if (this->_executionType == SIMULATED_MCTS) {
         return this->evaluateBySimulations();
     }
@@ -199,7 +198,7 @@ double Node::runRandomSimulation() {
     }
 }
 
-double Node::evaluateByNeuralNet() {
+double Node::evaluateByNeuralNet(bool shouldAddNoise) {
     this->evaluatePV();
 
     Game *board;
@@ -208,6 +207,12 @@ double Node::evaluateByNeuralNet() {
 
     int8_t action;
 
+    torch::Tensor prior = this->_statePriors;
+
+    if(shouldAddNoise) {
+        prior = 0.75 * prior + 0.25 * torch::_sample_dirichlet(dirichlet_tensor);
+    }
+
     for (auto& move : this->_moves) {
 
         board = this->_board->copy();
@@ -215,7 +220,7 @@ double Node::evaluateByNeuralNet() {
 
         action = board->moveToAction(move);
         newNode = new Node(board, this->_net);
-        newEdge = new Edge(this->_statePriors[action].item<double>(), this, newNode);
+        newEdge = new Edge(prior[action].item<double>(), this, newNode);
 
         newNode->setParentEdge(newEdge);
 
