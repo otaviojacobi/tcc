@@ -64,7 +64,7 @@ public:
     double expand();
     void backprop(double value);
 
-    SPiZTuple getStatePiZ(double T) const;
+    std::tuple<torch::Tensor, torch::Tensor> getStatePi(double T) const;
     int8_t getMostVisitedChild() const;
 
     void info() const;
@@ -108,14 +108,14 @@ public:
 
     ~MCTS();
 
-    SPiZTuple run(uint16_t simulations, double T);
+    std::tuple<torch::Tensor, torch::Tensor> run(uint16_t simulations, double T);
     int8_t run(uint16_t simulations);
 
     void setNewHead(int8_t move);
 
 private:
     Node* _root;
-    Node *search();
+    Node* search();
 
     std::shared_ptr<AlphaNet> _net;
 };

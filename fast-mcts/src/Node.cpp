@@ -102,10 +102,9 @@ void Node::backprop(double value){
     }
 }
 
-SPiZTuple Node::getStatePiZ(double T) const {
+std::tuple<torch::Tensor, torch::Tensor> Node::getStatePi(double T) const {
 
     double temperature = 1/T;
-    double z = 0;
     double prob;
     double totalProb = 0.0;
 
@@ -119,16 +118,11 @@ SPiZTuple Node::getStatePiZ(double T) const {
 
         action = this->_board->moveToAction(move);
         pi[action] = prob;
-        z += prob * this->_childEdges.at(move)->getActionValue();
     }
 
     pi.div_(totalProb);
-    z = z / totalProb;
 
-    if(z > 0)
-    z = z >= 0 ? 1.0 : -1.0;
-
-    return std::make_tuple(this->_state, pi, z);
+    return std::make_tuple(this->_state, pi);
 }
 
 void Node::evaluatePV(void) {
@@ -237,7 +231,6 @@ int8_t Node::getMostVisitedChild() const {
     uint8_t mostVisitedMove;
     uint8_t higherCount = 0;
 
-    //std::cout << "I am here" << std::endl; 
     for(auto &edge : this->_childEdges) {
         auto count = edge.second->getCount();
         if(count > higherCount) {
@@ -245,13 +238,11 @@ int8_t Node::getMostVisitedChild() const {
             higherCount = count;
         }
     }
-    //std::cout << "I am there " << (int) mostVisitedMove << std::endl; 
 
     return mostVisitedMove;
 }
 
 void Node::info() const {
-    //std::cout << "will display " << this->_childEdges.size() << std::endl;
     for(auto &edge : this->_childEdges) {
         std::cout << (int)edge.first << std::endl;
         edge.second->info();

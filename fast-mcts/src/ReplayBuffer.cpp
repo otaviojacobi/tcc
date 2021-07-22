@@ -102,3 +102,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> ReplayBuffer::sample(lon
 
     return std::make_tuple(S, PI, Z);
 }
+
+uint64_t ReplayBuffer::getCurSize() {
+    return _curlen;
+}

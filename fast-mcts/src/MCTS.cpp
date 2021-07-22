@@ -25,7 +25,7 @@ MCTS::~MCTS() {
     delete this->_root;
 }
 
-SPiZTuple MCTS::run(uint16_t simulations, double T) {
+std::tuple<torch::Tensor, torch::Tensor> MCTS::run(uint16_t simulations, double T) {
 
     Node* node;
     double value;
@@ -37,7 +37,7 @@ SPiZTuple MCTS::run(uint16_t simulations, double T) {
         node->backprop(value);
     }
 
-    return this->_root->getStatePiZ(T);
+    return this->_root->getStatePi(T);
 }
 
 int8_t MCTS::run(uint16_t simulations) {

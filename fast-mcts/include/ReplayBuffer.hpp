@@ -15,6 +15,8 @@ public:
     void push(std::shared_ptr<SPiZTuple> element);
     std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> sample(long size);
 
+    uint64_t getCurSize();
+
 private:
     boost::circular_buffer<std::shared_ptr<SPiZTuple>> memory;
     uint64_t _maxlen;
