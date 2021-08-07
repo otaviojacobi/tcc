@@ -42,19 +42,19 @@ int8_t Othello::score() {
 
 torch::Tensor Othello::state() const {
 
-    torch::Tensor gameState = torch::zeros({3, 8, 8});
+    torch::Tensor gameState = torch::zeros({1, 3, 8, 8});
     int8_t array_index;
 
     for(int8_t i = 0; i < 8; i++) {
         for(int8_t j = 0; j < 8; j++) {
             array_index = ((i + 1) * 10) + j + 1;
 
-            if (this->_board[array_index] == BLACK) gameState[0][i][j] = 1;
-            else if (this->_board[array_index] == WHITE) gameState[1][i][j] = 1;
+            if (this->_board[array_index] == BLACK) gameState[0][0][i][j] = 1;
+            else if (this->_board[array_index] == WHITE) gameState[0][1][i][j] = 1;
         }
     }
 
-    if (this->_player == BLACK) gameState[2] = 1;
+    if (this->_player == BLACK) gameState[0][2] = 1;
 
     return gameState;
 }

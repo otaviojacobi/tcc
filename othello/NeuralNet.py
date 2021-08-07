@@ -3,12 +3,14 @@ import torch
 
 class NeuralNet:
 
-    def __init__(self, device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
+    def __init__(self, device="cuda" if torch.cuda.is_available() else "cpu"):
 
-        if torch.cuda.is_available():
+        if device == "cuda":
             print('Neural net on ', torch.cuda.get_device_name(0))
+        else:
+            print('Neural net on cpu')
 
-        self.device = device
+        self.device = torch.device(device)
         self.nn = AlphaNet().to(self.device)
 
     def forward(self, X):

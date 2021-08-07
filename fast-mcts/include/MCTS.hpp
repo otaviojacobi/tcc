@@ -9,10 +9,16 @@
 
 #include <torch/torch.h>
 
+#include <thread>
+#include <mutex>
+
 #include "Game.hpp"
+#include "AlphaNet.hpp"
 
 #define SIMULATED_MCTS 0
 #define ALPHA_MCTS     1
+
+#define SPiZTuple std::tuple<torch::Tensor, torch::Tensor, double>
 
 class Node;
 
@@ -41,6 +47,9 @@ private:
 class Node {
 public:
     Node(Game *board);
+    Node(Game *board, std::shared_ptr<LockedNet> net);
+
+
     ~Node();
     double getTotalCount() const;
     bool isExpanded() const;
@@ -55,15 +64,17 @@ public:
 
     Node* getHighestUCBChild() const;
 
-    double expand();
+    double expand(bool shouldAddNoise);
     void backprop(double value);
 
-    std::tuple<torch::Tensor, torch::Tensor, double> getStatePiZ(double T) const;
+    std::tuple<torch::Tensor, torch::Tensor> getStatePi(double T) const;
     int8_t getMostVisitedChild() const;
 
     void info() const;
 
     Game* getBoard() const;
+
+    uint8_t getExecutionType() const;
 
 private:
     Game* _board;
@@ -83,25 +94,31 @@ private:
 
     uint8_t _executionType;
 
+    std::shared_ptr<LockedNet>_net;
+
     void evaluatePV();
     double runRandomSimulation();
 
     double evaluateBySimulations();
-    double evaluateByNeuralNet();
+    double evaluateByNeuralNet(bool shouldAddNoise);
 };
 
 
 class MCTS {
 public:
     MCTS(Game *board);
+    MCTS(Game *board, std::shared_ptr<LockedNet> net);
+
     ~MCTS();
 
-    std::tuple<torch::Tensor, torch::Tensor, double> run(uint16_t simulations, double T);
+    std::tuple<torch::Tensor, torch::Tensor> run(uint16_t simulations, double T);
     int8_t run(uint16_t simulations);
 
     void setNewHead(int8_t move);
 
 private:
     Node* _root;
-    Node *search();
+    Node* search();
+
+    std::shared_ptr<LockedNet> _net;
 };

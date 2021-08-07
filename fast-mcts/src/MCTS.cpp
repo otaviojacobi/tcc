@@ -4,6 +4,10 @@ MCTS::MCTS(Game *board) {
     this->_root = new Node(board->copy());
 }
 
+MCTS::MCTS(Game *board, std::shared_ptr<LockedNet> net) : _net(net) {
+    this->_root = new Node(board->copy(), net);
+}
+
 MCTS::~MCTS() {
 
     auto edges = this->_root->getChildEdges();
@@ -21,7 +25,7 @@ MCTS::~MCTS() {
     delete this->_root;
 }
 
-std::tuple<torch::Tensor, torch::Tensor, double> MCTS::run(uint16_t simulations, double T) {
+std::tuple<torch::Tensor, torch::Tensor> MCTS::run(uint16_t simulations, double T) {
 
     Node* node;
     double value;
@@ -29,11 +33,11 @@ std::tuple<torch::Tensor, torch::Tensor, double> MCTS::run(uint16_t simulations,
     for(uint16_t i = 0; i < simulations; i++) {
 
         node = this->search();
-        value = node->expand();
+        value = node->expand(i==0);
         node->backprop(value);
     }
 
-    return this->_root->getStatePiZ(T);
+    return this->_root->getStatePi(T);
 }
 
 int8_t MCTS::run(uint16_t simulations) {
@@ -42,9 +46,8 @@ int8_t MCTS::run(uint16_t simulations) {
 
     for(uint16_t i = 0; i < simulations; i++) {
         node = this->search();
-        value = node->expand();
+        value = node->expand(false);
         node->backprop(value);
-        //this->_root->info();
     }
 
     return this->_root->getMostVisitedChild();
@@ -57,7 +60,7 @@ void MCTS::setNewHead(int8_t move) {
     keys.reserve(edges->size());
     Node *nextHead;
 
-    bool hasNextHead = edges->contains(move);
+    bool hasNextHead = edges->count(move);;
 
     if(hasNextHead) {
         nextHead = edges->at(move)->getChild();;
@@ -82,7 +85,11 @@ void MCTS::setNewHead(int8_t move) {
     } else {
         auto newBoard = this->_root->getBoard()->copy();
         newBoard->play(move);
-        nextHead = new Node(newBoard);
+        if(this->_root->getExecutionType() == SIMULATED_MCTS) {
+            nextHead = new Node(newBoard);
+        } else if(this->_root->getExecutionType() == ALPHA_MCTS){
+            nextHead = new Node(newBoard, this->_net);
+        }
         delete this->_root;
         this->_root = nextHead;
     }

@@ -1,19 +1,25 @@
 #include "MCTS.hpp"
 #include "Othello.hpp"
 
+torch::Tensor dirichlet_tensor = torch::ones({64}) * 0.3;
 Node::Node(Game *board) {
     this->_board = board;
     this->_parentEdge = NULL;
-
     this->_isExpanded = false;
-
     this->_moves = board->moves();
-
     this->_isLeaf = this->_moves.empty(); 
-
     this->_edgeCountSum = 0;
-
     this->_executionType = SIMULATED_MCTS;
+}
+
+Node::Node(Game *board, std::shared_ptr<LockedNet> net) : _net(net) {
+    this->_board = board;
+    this->_parentEdge = NULL;
+    this->_isExpanded = false;
+    this->_moves = board->moves();
+    this->_isLeaf = this->_moves.empty(); 
+    this->_edgeCountSum = 0;
+    this->_executionType = ALPHA_MCTS;
 }
 
 Node::~Node() {
@@ -71,9 +77,9 @@ Node* Node::getHighestUCBChild() const {
     return best_edge->getChild();
 }
 
-double Node::expand() {
+double Node::expand(bool shouldAddNoise) {
     if(this->_executionType == ALPHA_MCTS) {
-        return this->evaluateByNeuralNet();
+        return this->evaluateByNeuralNet(shouldAddNoise);
     } else if (this->_executionType == SIMULATED_MCTS) {
         return this->evaluateBySimulations();
     }
@@ -95,10 +101,9 @@ void Node::backprop(double value){
     }
 }
 
-std::tuple<torch::Tensor, torch::Tensor, double> Node::getStatePiZ(double T) const {
+std::tuple<torch::Tensor, torch::Tensor> Node::getStatePi(double T) const {
 
     double temperature = 1/T;
-    double z = 0;
     double prob;
     double totalProb = 0.0;
 
@@ -112,27 +117,22 @@ std::tuple<torch::Tensor, torch::Tensor, double> Node::getStatePiZ(double T) con
 
         action = this->_board->moveToAction(move);
         pi[action] = prob;
-        z += prob * this->_childEdges.at(move)->getActionValue();
     }
 
     pi.div_(totalProb);
-    z = z / totalProb;
 
-    if(z > 0)
-    z = z >= 0 ? 1.0 : -1.0;
-
-    return std::make_tuple(this->_state, pi, z);
+    return std::make_tuple(this->_state, pi);
 }
 
 void Node::evaluatePV(void) {
     this->_state = this->_board->state();
 
     //TODO: with no autograd, evaluate neural net
-    torch::Tensor p = torch::ones({64, 1});
-    torch::Tensor v = torch::randn({1,1});
+    torch::NoGradGuard no_grad;
+    auto pv = this->_net->forward(this->_state);
 
-    this->_statePriors = p;
-    this->_stateValue = v.item<double>();
+    this->_statePriors = pv.first[0];
+    this->_stateValue = pv.second.item<double>();
 }
 
 double Node::evaluateBySimulations() {
@@ -154,7 +154,6 @@ double Node::evaluateBySimulations() {
 
         this->_childEdges[move] = newEdge;
     }
-
     this->_edgeCountSum += 1;
     this->_isExpanded = true;
 
@@ -199,7 +198,7 @@ double Node::runRandomSimulation() {
     }
 }
 
-double Node::evaluateByNeuralNet() {
+double Node::evaluateByNeuralNet(bool shouldAddNoise) {
     this->evaluatePV();
 
     Game *board;
@@ -208,14 +207,20 @@ double Node::evaluateByNeuralNet() {
 
     int8_t action;
 
+    torch::Tensor prior = this->_statePriors;
+
+    if(shouldAddNoise) {
+        prior = 0.75 * prior + 0.25 * torch::_sample_dirichlet(dirichlet_tensor);
+    }
+
     for (auto& move : this->_moves) {
 
         board = this->_board->copy();
         board->play(move);
 
         action = board->moveToAction(move);
-        newNode = new Node(board);
-        newEdge = new Edge(this->_statePriors[action].item<double>(), this, newNode);
+        newNode = new Node(board, this->_net);
+        newEdge = new Edge(prior[action].item<double>(), this, newNode);
 
         newNode->setParentEdge(newEdge);
 
@@ -231,7 +236,6 @@ int8_t Node::getMostVisitedChild() const {
     uint8_t mostVisitedMove;
     uint8_t higherCount = 0;
 
-    //std::cout << "I am here" << std::endl; 
     for(auto &edge : this->_childEdges) {
         auto count = edge.second->getCount();
         if(count > higherCount) {
@@ -239,13 +243,11 @@ int8_t Node::getMostVisitedChild() const {
             higherCount = count;
         }
     }
-    //std::cout << "I am there " << (int) mostVisitedMove << std::endl; 
 
     return mostVisitedMove;
 }
 
 void Node::info() const {
-    //std::cout << "will display " << this->_childEdges.size() << std::endl;
     for(auto &edge : this->_childEdges) {
         std::cout << (int)edge.first << std::endl;
         edge.second->info();
@@ -254,4 +256,8 @@ void Node::info() const {
 
 Game* Node::getBoard() const {
     return this->_board;
+}
+
+uint8_t Node::getExecutionType() const {
+    return this->_executionType;
 }
