@@ -1,7 +1,10 @@
+# distutils: language = c++
+# cython: language_level=3
+
 from cpython.ref cimport PyObject
 
 from libc.math cimport sqrt, log
-from libc.stdlib cimport rand
+from random import choice
 
 cdef class Node:
     cdef object state
@@ -12,7 +15,6 @@ cdef class Node:
 
     cdef dict children
     cdef set unexpanded
-
 
     def __init__(self, object board, object parent = None):
         self.state = board
@@ -35,23 +37,26 @@ cdef class Node:
         return len(self.children) == 0
 
     ## TODO: change me for correct ucb with value sum
-    cpdef double ucb(self, unsigned int c = 2):
+    cpdef double ucb(self, double c):
         parent = <object>self.parent
-        return self.value + c * sqrt(2 * log(parent.visits_count())/self.visits )
+        return self.value + c * sqrt(log(parent.visits_count())/self.visits)
 
-    cpdef object get_highest_ucb_child(self):
+    cpdef object get_highest_ucb_child(self, double c):
         cdef double hi = -99999.0
 
         cdef double ucb
         cdef object best_child
 
         for child_node in self.children.values():
-            ucb = child_node.ucb()
+            ucb = child_node.ucb(c)
             if ucb > hi:
                 hi = ucb
                 best_child = child_node
 
         return best_child
+
+    cpdef dict get_child(self):
+        return self.children
 
     cpdef char get_random_unexplored_action(self):
         return next(iter(self.unexpanded))
@@ -113,20 +118,21 @@ cdef class Node:
 
         cdef list legal_moves = board_copy.legal_moves()
         cdef int random_index
-        cdef int len_legal_moves = len(legal_moves)
 
         cdef double score = 0
 
-        while len_legal_moves != 0:
-            random_index = int(rand() % len_legal_moves)
-            a = legal_moves[random_index]
-            _, r, _ = board_copy.step(a)
+        if board_copy.is_over():
+            score = 1000.0
 
+        done = board_copy.is_over()
+        while not done:
+
+            a = choice(legal_moves)
+            s, r, done = board_copy.step(a)
             score += r
-
             legal_moves = board_copy.legal_moves()
-            len_legal_moves = len(legal_moves)
 
+        #print(score)
         return score
 
 
@@ -137,6 +143,13 @@ cdef class Node:
             node.update(value)
             node = node.get_parent()
 
+    cpdef void info(self, double c):
+        print('total', self.total)
+        print('value', self.value)
+        print('visits', self.visits)
+        print('ucb', self.ucb(c))
+
+
 
 cdef class MCTS():
     cdef object root
@@ -144,19 +157,36 @@ cdef class MCTS():
     def __init__(self, object game):
         self.root = Node(game.copy())
 
-    cpdef char run(self, unsigned int simulations):
-        for _ in range(simulations):
-            node_to_expand = self.search()
+    cpdef char run(self, unsigned int simulations, double c):
+        for SIMU in range(simulations):
+            node_to_expand = self.search(c)
             new_node = node_to_expand.expand()
             score = new_node.simulate()
             new_node.backprop(score)
         
         return self.root.get_best_action()
 
-    cpdef object search(self):
+    cpdef object search(self, double c):
         cdef object cur_node = self.root
 
         while cur_node.is_fully_expanded() and not cur_node.is_leaf():
-            cur_node = cur_node.get_highest_ucb_child()
+            cur_node = cur_node.get_highest_ucb_child(c)
         
         return cur_node
+
+    def info(self, double c):
+        stack = [self.root]
+
+#        while len(stack) > 0:
+        n = stack.pop()
+        n.info(c)
+        childs = n.get_child()
+
+        for action, child in childs.items():
+            print(action)
+            child.info(c)
+
+
+        # for action, child in childs.items():
+        #     if child != None:
+        #         stack.append(child)

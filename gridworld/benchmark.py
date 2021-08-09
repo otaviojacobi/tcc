@@ -1,39 +1,40 @@
-from random import choice
 import time
 
 import matplotlib.pyplot as plt
+import random
 
 from gridworld_cython import GridWorld
 from mcts_cython import MCTS
 
-possible_actions = [0, 1, 2, 3]
 start_time = time.time()
 
 
-results = [0.0] * 9
-SMOOTH = 10
-for smooth in range(SMOOTH):
-    i = 0
-    for sims in range(10, 100, 10):
-        print(smooth, sims)
-        env = GridWorld(20, 10, 10)
-        total = 0
+SIM_RANGE = range(7, 25, 1)
+SMOOTH = 20
+CPUTC = 200
 
-        while len(env.legal_moves()) != 0:
+random.seed(42)
 
+results_size = (len(list(SIM_RANGE)) + 1)
+results = [0.0] * results_size
+i = 0
+for sims in SIM_RANGE:
+    total = 0
+    for smooth in range(SMOOTH):
+        print(sims, smooth)
+        env = GridWorld(30, goalX=15, goalY=15)
+        done = False
+        while not done:
             mcts = MCTS(env.copy())
-            a = mcts.run(sims)
-            s, r, _ = env.step(a)
-            
+            a = mcts.run(sims, CPUTC)
+            #a=random.choice([0,1,2,3])
+            s, r, done = env.step(a)
+
             total += r
 
-        results[i] += total
+    results[i] += total/SMOOTH
+    i += 1
 
-        i+= 1
-        i = i % 9
 
-for k in range(9):
-    results[k] /= SMOOTH
-
-plt.plot(results)
+plt.plot(list(SIM_RANGE), results)
 plt.savefig('result.png')

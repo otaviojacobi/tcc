@@ -1,6 +1,9 @@
 #include "MCTS.hpp"
 #include "Othello.hpp"
 
+uint64_t totalForwards = 0;
+double totalTime = 0.0;
+
 torch::Tensor dirichlet_tensor = torch::ones({64}) * 0.3;
 Node::Node(Game *board) {
     this->_board = board;
@@ -109,7 +112,7 @@ std::tuple<torch::Tensor, torch::Tensor> Node::getStatePi(double T) const {
 
     int8_t action;
 
-    torch::Tensor pi = torch::zeros({64});
+    torch::Tensor pi = torch::zeros({64}).detach();
 
     for (auto &move : this->_moves) {
         prob = pow(this->_childEdges.at(move)->getCount(), temperature);
@@ -125,12 +128,19 @@ std::tuple<torch::Tensor, torch::Tensor> Node::getStatePi(double T) const {
 }
 
 void Node::evaluatePV(void) {
-    this->_state = this->_board->state();
 
     //TODO: with no autograd, evaluate neural net
     torch::NoGradGuard no_grad;
-    auto pv = this->_net->forward(this->_state);
 
+    this->_state = this->_board->state().detach().requires_grad_(false);;
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();;
+    auto pv = this->_net->forward(this->_state);
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();;
+
+    totalTime +=  std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000.0;
+    totalForwards++;
+    
     this->_statePriors = pv.first[0];
     this->_stateValue = pv.second.item<double>();
 }
@@ -260,4 +270,32 @@ Game* Node::getBoard() const {
 
 uint8_t Node::getExecutionType() const {
     return this->_executionType;
+}
+
+double Node::totalBranches() const {
+    if(this->_childEdges.size() == 0) {
+        return 1.0;
+    }
+
+    double sum = 0;
+    for(auto &edge: this->_childEdges) {
+        sum += edge.second->getChild()->totalBranches();
+    }
+
+    return sum;
+}
+
+double Node::totalNodes() const {
+
+    double sum = 1.0;
+    for(auto &edge: this->_childEdges) {
+        if(edge.second->getChild()->isExpanded()) {
+            sum += edge.second->getChild()->totalNodes();
+        }
+    }
+    return sum;
+}
+
+double Node::avgForwardTime() const {
+    return totalTime/totalForwards;
 }

@@ -6,6 +6,7 @@
 #include <tuple>
 #include <stack>
 #include <map>
+#include <chrono>
 
 #include <torch/torch.h>
 
@@ -74,6 +75,11 @@ public:
 
     Game* getBoard() const;
 
+    double totalBranches() const;
+    double totalNodes() const;
+    double avgForwardTime() const;
+
+
     uint8_t getExecutionType() const;
 
 private:
@@ -115,6 +121,11 @@ public:
     int8_t run(uint16_t simulations);
 
     void setNewHead(int8_t move);
+
+    double avgBranchFactor() const;
+    double avgForwardTime() const;
+
+
 
 private:
     Node* _root;

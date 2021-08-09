@@ -33,13 +33,13 @@ class RandomIterator
         }
 
         // Return a bool to determine if there are any numbers left to generate
-        const bool has_next(void)
+        bool has_next(void)
         {
             return num_left > 0;
         }
 
         // Generate the next random number
-        const unsigned long long next(void)
+        unsigned long long next(void)
         {
             if (num_left > 0)
             {

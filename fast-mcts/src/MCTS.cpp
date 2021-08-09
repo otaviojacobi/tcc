@@ -105,3 +105,12 @@ Node* MCTS::search(void) {
 
     return curNode;
 }
+
+double MCTS::avgBranchFactor() const {
+    return this->_root->totalBranches() / this->_root->totalNodes();
+}
+
+// CAUTION ONLY ONE INFERENCE THREAD !!!
+double MCTS::avgForwardTime() const {
+    return this->_root->avgForwardTime();
+}
