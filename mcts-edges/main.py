@@ -1,30 +1,41 @@
-import matplotlib.pyplot as plt
+from GridWorld import GridWorld
+from MCTS import MCTS
 import ray
 
-from gridworld_cython import GridWorld
-from mcts_cython import MCTS
+import matplotlib.pyplot as plt
 
-ray.init()
-
-SIM_RANGE = [7,8,9,10,100,150,200]
+SIM_RANGE = list(range(10,60))
 SMOOTH = 50
-CPUTC = 200
+CPUTC = 20
 
 
 @ray.remote
 def run_single_sim(sims, smooth, cputc):
     print(sims, smooth)
-    env = GridWorld(30, goalX=15, goalY=15)
-    done = False
-    total = 0
-    while not done:
-        mcts = MCTS(env.copy())
+
+    env = GridWorld('''
+........*......
+.X......*......
+........*......
+...............
+........*......
+........*......
+***.*********.*
+........*......
+........*......
+........*...G..
+........*......
+...............
+........*......
+''')
+
+    while not env.finished():
+        mcts = MCTS(env)
         a = mcts.run(sims, cputc)
-        _, r, done = env.step(a)
+        env.play(a)
 
-        total += r
+    return env.get_score()
 
-    return total
 
 @ray.remote
 def run_smoothed(sims, smooth_factor, cputc):
@@ -33,10 +44,9 @@ def run_smoothed(sims, smooth_factor, cputc):
     print(totals)
     return sum(totals)/len(totals)
 
+
 features = [run_smoothed.remote(sims, SMOOTH, CPUTC) for sims in SIM_RANGE]
 out = ray.get(features)
-
-print(out)
 
 plt.plot(out)
 

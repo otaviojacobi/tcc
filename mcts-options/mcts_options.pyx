@@ -13,6 +13,7 @@ cdef class Node:
     cdef double value
     cdef double total
 
+    cdef list options
     cdef dict children
     cdef set unexpanded
 
@@ -23,6 +24,7 @@ cdef class Node:
         self.visits = 0
 
         self.parent = <PyObject*>parent
+
 
         self.unexpanded = set()
         self.children = dict()
@@ -76,7 +78,7 @@ cdef class Node:
 
     cpdef char get_best_action(self):
         cdef double most_visits = -9999
-        cdef char max_action
+        cdef char max_action = 0
 
         cdef char action
         cdef object node
@@ -84,11 +86,12 @@ cdef class Node:
 
         for action in self.children.keys():
             node = self.children[action]
-            nr_visits = node.visits_count()
-            #print(action, nr_visits)
-            if nr_visits > most_visits:
-                most_visits = nr_visits
-                max_action = action
+            if node != None:
+                nr_visits = node.visits_count()
+                #print(action, nr_visits)
+                if nr_visits > most_visits:
+                    most_visits = nr_visits
+                    max_action = action
 
         #print(prob_winning)
         return max_action
@@ -98,18 +101,44 @@ cdef class Node:
         self.total += value
         self.value = self.total / self.visits
 
+
+    cpdef object get_random_option(self):
+        return choice(self.state.get_options())
+
+    cpdef object get_state(self):
+        return self.state
+
+    cpdef void remove_unexpanded(self, char action):
+        if action in self.unexpanded:
+            self.unexpanded.remove(action)
+
+    cpdef void set_child(self, char action, object new_node):
+        self.children[action] = new_node
+
     cpdef object expand(self):
         if self.is_leaf():
             return self 
 
-        cdef char action = self.get_random_unexplored_action()
+        cdef object node = self
+        cdef object new_node = self
+        cdef object new_board
+        option = node.get_random_option()
 
-        cdef object new_board = self.state.copy()
-        new_board.step(action)
+        counter = 0
+        while not option.is_over(node.get_state()) and not node.is_leaf():
 
-        cdef object new_node = Node(new_board, parent=self)
-        self.unexpanded.remove(action)
-        self.children[action] = new_node
+            action = option.get_action(node.get_state())
+
+            new_board = node.get_state_copy()
+            new_board.step(action)
+
+            new_node = Node(new_board, parent=node)
+            node.remove_unexpanded(action)
+            node.set_child(action, new_node)
+
+            node = new_node
+            counter += 1
+        
 
         return new_node
 
@@ -125,19 +154,12 @@ cdef class Node:
             score = 1000.0
 
         done = board_copy.is_over()
-        counter = 0
-        while not done and counter < 15:
+        while not done:
 
             a = choice(legal_moves)
             s, r, done = board_copy.step(a)
             score += r
             legal_moves = board_copy.legal_moves()
-
-            counter += 1
-
-        (cur_x, cur_y) = board_copy.state()
-        dist_to_goal = abs(15-cur_x) + abs(15-cur_y)
-        score = 1000.0 - score - dist_to_goal
 
         #print(score)
         return score
@@ -186,7 +208,7 @@ cdef class MCTS():
 
 #        while len(stack) > 0:
         n = stack.pop()
-        #n.info(c)
+        n.info(c)
         childs = n.get_child()
 
         for action, child in childs.items():
