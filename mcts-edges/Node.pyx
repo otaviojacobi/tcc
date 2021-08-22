@@ -4,39 +4,39 @@
 from libc.stdint cimport uint16_t, int8_t
 from libc.math cimport INFINITY
 
-from random import choice
+from random import choice, shuffle
 from Edge import Edge
 
 import numpy as np
 
 cdef class Node:
-    cdef object _board
+    cdef public object board
     cdef object _parent_edge
-    cdef dict _child_edges
+    cdef public dict child_edges
 
     cdef list _moves
 
     cdef bint _is_leaf
-    cdef bint _is_expanded
+    cdef public bint expanded
 
-    cdef uint16_t _edge_count_sum
+    cdef public uint16_t edge_count_sum
 
     cdef double _state_value
 
     def __init__(self, object board):
-        self._board = board
+        self.board = board
         self._parent_edge = None
-        self._is_expanded = False
+        self.expanded = False
         self._moves = board.legal_moves()
         self._is_leaf = len(self._moves) == 0
-        self._edge_count_sum = 0
-        self._child_edges = {}
+        self.edge_count_sum = 0
+        self.child_edges = {}
 
     cpdef uint16_t get_total_count(self):
-        return self._edge_count_sum
+        return self.edge_count_sum
 
     cpdef bint is_expanded(self):
-        return self._is_expanded
+        return self.expanded
 
     cpdef bint is_leaf(self):
         return self._is_leaf
@@ -47,11 +47,11 @@ cdef class Node:
     cpdef object get_parent_edge(self):
         return self._parent_edge
 
-    cpdef dict get_child_edges(self):
-        return self._child_edges
+    cpdef dict getchild_edges(self):
+        return self.child_edges
 
     cpdef void increment_counter(self):
-        self._edge_count_sum += 1
+        self.edge_count_sum += 1
 
     # TODO: maybe we can avoid this loop by using a heap
     # Everytime we backprop in the tree each edge traversed updates its ucb value and updates the heap
@@ -64,7 +64,7 @@ cdef class Node:
         cdef object edge = None
         cdef object best_edge = None
 
-        for edge in self._child_edges.values():
+        for edge in shuffle(self.child_edges.values()):
             ucb = edge.ucb(c)
             if ucb > highest:
                 highest = ucb
@@ -78,7 +78,7 @@ cdef class Node:
         cdef uint16_t count
         cdef int8_t most_visited_move
 
-        for action, edge in self._child_edges.items():
+        for action, edge in self.child_edges.items():
             count = edge.get_count()
             if count > higher_count:
                 most_visited_move = action
@@ -88,41 +88,56 @@ cdef class Node:
 
     cpdef double expand(self):
 
-        #cdef double score = self.simulate()
-        cdef double score = np.random.normal(self._board.get_oracle_score(), 5)
+        if self._is_leaf:
+            return 0
 
-        cdef object board
+        #cdef double score = self.simulate()
+
+        cdef object node = self
+        cdef object option = choice(node.board.get_valid_options())
+        cdef int8_t option_action
+        
         cdef object new_node
         cdef object new_edge
 
-        for move in self._moves:
-            board = self._board.copy()
-            board.play(move)
+        while not option.finished and not node.is_leaf():
+            option_action = option.get_action(node.board)
 
-            new_node = Node(board)
-            new_edge = Edge(1, self, new_node)
+            if option_action == -1:
+                break
 
-            new_node.set_parent_edge(new_edge)
-            self._child_edges[move] = new_edge
+            node.edge_count_sum += 1
+            node.expanded = True
 
+            for move in node.board.legal_moves():
+                board = node.board.copy()
+                board.play(move)
 
-        self._edge_count_sum += 1
-        self._is_expanded = True
+                new_node = Node(board)
+                new_edge = Edge(1, node, new_node)
+
+                new_node.set_parent_edge(new_edge)
+                node.child_edges[move] = new_edge
+
+            node = node.child_edges[option_action].get_child()
+
+        cdef double score = np.random.normal(node.board.get_oracle_score(), 4)
+
 
         return score
 
     cpdef double simulate(self):
-        cdef simulation_board = self._board.copy()
+        cdef simulationboard = self.board.copy()
 
         cdef list moves = self._moves
         cdef int8_t move
 
-        while not simulation_board.finished():
+        while not simulationboard.finished():
             move = choice(moves)
-            simulation_board.play(move)
-            moves = simulation_board.legal_moves()
+            simulationboard.play(move)
+            moves = simulationboard.legal_moves()
         
-        return simulation_board.get_score()
+        return simulationboard.get_score()
 
     cpdef void backprop(self, double value):
         cdef object cur_edge = self._parent_edge
@@ -132,6 +147,6 @@ cdef class Node:
             cur_edge = cur_edge.get_parent().get_parent_edge()
 
     cpdef void info(self, double c):
-        for action, edge in self._child_edges.items():
+        for action, edge in self.child_edges.items():
             print('Action: ', action)
             edge.info(c)

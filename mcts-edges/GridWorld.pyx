@@ -4,6 +4,8 @@ from libc.stdint cimport int8_t, uint16_t
 from libc.math cimport INFINITY, abs
 from collections import defaultdict
 
+from GridWorldOption import GridWorldOption
+
 cdef int8_t UP = 0
 cdef int8_t DOWN = 1
 cdef int8_t RIGHT = 2
@@ -22,6 +24,8 @@ cdef class GridWorld:
 
     cdef public int initial_x
     cdef public int initial_y
+
+    cdef list composed_options
 
     def __init__(self, str grid_map = None):
 
@@ -42,6 +46,7 @@ cdef class GridWorld:
                 if char == '.' or char == 'X' or char == 'G':
                     self.possible_positions.add((x, y))
 
+        self.composed_options = list()
         self.is_over = False
         self.score = 0.0
 
@@ -58,6 +63,35 @@ cdef class GridWorld:
 
     cpdef double _inf(self):
         return INFINITY
+
+    cpdef void add_option(self, object option):
+        self.composed_options.append(option)
+
+    cpdef list get_valid_options(self):
+        cdef list valid_options = list()
+
+        for option in self.composed_options:
+            if option.is_valid_option(self):
+                valid_options.append(option)
+
+
+        for move in self.legal_moves():
+
+            next_x = self.cur_x
+            next_y = self.cur_y
+            if move == UP:
+                next_x -= 1
+            elif move == DOWN:
+                next_x += 1
+            elif move == RIGHT:
+                next_y += 1
+            elif move == LEFT:
+                next_y -= 1
+
+            valid_options.append(GridWorldOption((next_x, next_y), {'all'}))
+
+        return valid_options
+
 
     # This is a debugging/test function
     # It returns -MIN_NUMBER_STEPS to reach the goal G from current position
@@ -191,5 +225,7 @@ cdef class GridWorld:
 
         g.initial_x = self.initial_x
         g.initial_y = self.initial_y
+
+        g.composed_options = self.composed_options
 
         return g
