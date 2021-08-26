@@ -5,12 +5,25 @@ import ray
 
 import matplotlib.pyplot as plt
 
-SIM_RANGE = list(range(10,30))
-SMOOTH = 10
+SIM_RANGE = list(range(10,80))
+SMOOTH = 50
 CPUTC = 20
 
-with open('envmap.txt') as f:
-    env_map = f.read()
+env_map = '''
+........*......
+.X......*......
+........*......
+...............
+........*......
+........*......
+***.*********.*
+........*......
+........*......
+........*...G..
+........*......
+...............
+........*......
+'''
 
 @ray.remote
 def run_single_sim(sims, smooth, cputc):
@@ -35,14 +48,15 @@ def run_smoothed(sims, smooth_factor, cputc):
     print(totals)
     return sum(totals)/len(totals)
 
+
 @ray.remote
 def run_single_sim_options(sims, smooth, cputc):
     print('random opts', sims, smooth)
 
     env = GridWorld(env_map)
-    env.add_option(GridWorldOption((5,46), {'all'}))
-    env.add_option(GridWorldOption((32,43), {'all'}))
-    env.add_option(GridWorldOption((30,10), {'all'}))
+    env.add_option(GridWorldOption((2,11), {'all'}))
+    env.add_option(GridWorldOption((9,4), {'all'}))
+    env.add_option(GridWorldOption((11,11), {'all'}))
 
     counter = 0
     while not env.finished():
@@ -55,6 +69,7 @@ def run_single_sim_options(sims, smooth, cputc):
             break 
 
     return env.get_score()
+    
 @ray.remote
 def run_smoothed_options(sims, smooth_factor, cputc):
     features = [run_single_sim_options.remote(sims, smooth, cputc) for smooth in range(smooth_factor)]
@@ -63,21 +78,21 @@ def run_smoothed_options(sims, smooth_factor, cputc):
     return sum(totals)/len(totals)
 
 
+
 @ray.remote
 def run_single_sim_doors(sims, smooth, cputc):
-    print('doors', sims, smooth)
+    print('door opts', sims, smooth)
 
     env = GridWorld(env_map)
+    first_room_pos = [(i,j) for i in range(6) for j in range(8)]
+    second_room_pos = [(i,j) for i in range(6) for j in range(9, 15)]
+    third_room_pos = [(i,j) for i in range(7,13) for j in range(8)]
+    fourth_room_pos = [(i,j) for i in range(7,13) for j in range(9,15)]
 
-    first_room_pos = [(i,j) for i in range(14) for j in range(28)]
-    second_room_pos = [(i,j) for i in range(14) for j in range(29, 57)]
-    third_room_pos = [(i,j) for i in range(15,35) for j in range(28)]
-    fourth_room_pos = [(i,j) for i in range(15,35) for j in range(29,57)]
-
-    env.add_option(GridWorldOption((3,28),  set(first_room_pos + second_room_pos + [(14,10)] + [(14,45)])))
-    env.add_option(GridWorldOption((14,10),  set(first_room_pos + third_room_pos + [(3,28)] + [(30,28)])))
-    env.add_option(GridWorldOption((14,45), set(second_room_pos + fourth_room_pos + [(3,28)] + [(30,28)])))
-    env.add_option(GridWorldOption((30,28), set(third_room_pos + fourth_room_pos + [(14,10)] + [(14,45)])))
+    env.add_option(GridWorldOption((3,8),  set(first_room_pos + second_room_pos + [(6,3)] + [(6,13)])))
+    env.add_option(GridWorldOption((6,3),  set(first_room_pos + third_room_pos + [(3,8)] + [(11,8)])))
+    env.add_option(GridWorldOption((6,13), set(second_room_pos + fourth_room_pos + [(3,8)] + [(11,8)])))
+    env.add_option(GridWorldOption((11,8), set(third_room_pos + fourth_room_pos + [(6,3)] + [(6,13)])))
 
     counter = 0
     while not env.finished():
@@ -102,7 +117,6 @@ def run_smoothed_doors(sims, smooth_factor, cputc):
 features = [run_smoothed.remote(sims, SMOOTH, CPUTC) for sims in SIM_RANGE]
 out = ray.get(features)
 
-
 features = [run_smoothed_options.remote(sims, SMOOTH, CPUTC) for sims in SIM_RANGE]
 out2 = ray.get(features)
 
@@ -115,10 +129,10 @@ print('RESULT 2', out2)
 print('RESULT 3', out3)
 
 
+
 plt.plot(out)
 plt.plot(out2)
 plt.plot(out3)
-
 
 
 plt.savefig('result.png')

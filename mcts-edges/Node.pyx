@@ -64,7 +64,9 @@ cdef class Node:
         cdef object edge = None
         cdef object best_edge = None
 
-        for edge in shuffle(self.child_edges.values()):
+        values = list(self.child_edges.values())
+        shuffle(values)
+        for edge in values:
             ucb = edge.ucb(c)
             if ucb > highest:
                 highest = ucb
@@ -91,8 +93,6 @@ cdef class Node:
         if self._is_leaf:
             return 0
 
-        #cdef double score = self.simulate()
-
         cdef object node = self
         cdef object option = choice(node.board.get_valid_options())
         cdef int8_t option_action
@@ -109,10 +109,20 @@ cdef class Node:
             node.edge_count_sum += 1
             node.expanded = True
 
+            # if option_action in node.child_edges.keys():
+            #     print('NAO deveria')
+
             for move in node.board.legal_moves():
+
+                if move in node.child_edges.keys() and node.child_edges[move] is not None:
+                    continue
+
                 board = node.board.copy()
                 board.play(move)
 
+                #TODO: do not create sibling node
+                #TODO: re-read mcts-o options
+                #TODO: add gamma correction to backup
                 new_node = Node(board)
                 new_edge = Edge(1, node, new_node)
 
@@ -121,10 +131,16 @@ cdef class Node:
 
             node = node.child_edges[option_action].get_child()
 
-        cdef double score = np.random.normal(node.board.get_oracle_score(), 4)
+        # this is important so option can run again 
+        option.finished = False
+
+        #TODO: double check no noise
+        cdef double score = node.board.get_oracle_score() -21
+        cdef double noisy_score = np.random.normal(node.board.get_oracle_score(), 15)
+        #cdef double score = node.simulate()
 
 
-        return score
+        return min(score, noisy_score)
 
     cpdef double simulate(self):
         cdef simulationboard = self.board.copy()
