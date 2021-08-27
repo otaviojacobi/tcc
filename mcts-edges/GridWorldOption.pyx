@@ -17,12 +17,20 @@ cdef class GridWorldOption:
 
     cdef set activate_positions
 
-    def __init__(self, tuple final_state, set activate_positions):
+    cdef public bint is_primitive
+
+    def __init__(self, tuple final_state, set activate_positions, bint is_primitive=False):
         self._final_x, self._final_y = final_state
         self.activate_positions = activate_positions
         self.finished = False
+        self.is_primitive = is_primitive
 
     cpdef bint is_valid_option(self, object grid_world):
+
+        # do not allow for options that take you to the same place
+        # TODO: be careful about single step actions
+        if grid_world.cur_x == self._final_x and grid_world.cur_y == self._final_y:
+            return False
 
         if 'all' in self.activate_positions:
             return True

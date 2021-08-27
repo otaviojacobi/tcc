@@ -25,12 +25,16 @@ cdef class GridWorld:
     cdef public int initial_x
     cdef public int initial_y
 
+    cdef public str grid_map
+
     cdef list composed_options
 
     def __init__(self, str grid_map = None):
 
         if grid_map == None:
             return
+
+        self.grid_map = grid_map
 
         cdef list lines = grid_map.strip('\n ').split('\n')
         self.possible_positions = set()
@@ -88,7 +92,7 @@ cdef class GridWorld:
             elif move == LEFT:
                 next_y -= 1
 
-            valid_options.append(GridWorldOption((next_x, next_y), {'all'}))
+            valid_options.append(GridWorldOption((next_x, next_y), {'all'}, is_primitive=True))
 
         return valid_options
 
@@ -170,6 +174,17 @@ cdef class GridWorld:
 
     cpdef int h(self, tuple cur, tuple goal):
         return abs(cur[0] - goal[0]) + abs(cur[1] - goal[1])
+
+    def render(self):
+        cdef list lines = self.grid_map.strip('\n ').split('\n')
+
+        lines = [line.replace('X', '.') for line in lines]
+
+        as_list = list(lines[self.cur_x])
+        as_list[self.cur_y] = 'X'
+        lines[self.cur_x] = ''.join(as_list)
+
+        print('\n'.join(lines))
 
     def play(self, int8_t move):
         if self.is_over:

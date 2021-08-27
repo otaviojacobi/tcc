@@ -128,8 +128,6 @@ print('RESULT 1', out)
 print('RESULT 2', out2)
 print('RESULT 3', out3)
 
-
-
 plt.plot(out)
 plt.plot(out2)
 plt.plot(out3)

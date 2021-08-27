@@ -88,9 +88,24 @@ cdef class Node:
 
         return most_visited_move
 
+    cpdef object get_higher_value_child(self):
+        cdef double higher_count = -999999.0
+
+        cdef double count
+        cdef int8_t most_visited_move
+
+        for action, edge in self.child_edges.items():
+            count = edge.get_action_value()
+            if count > higher_count:
+                most_visited_move = action
+                higher_count = count
+
+        return most_visited_move
+
     cpdef double expand(self):
 
         if self._is_leaf:
+            self.backprop(0)
             return 0
 
         cdef object node = self
@@ -99,6 +114,22 @@ cdef class Node:
         
         cdef object new_node
         cdef object new_edge
+
+        for move in self.board.legal_moves():
+            if move in self.child_edges.keys() and self.child_edges[move] is not None:
+                continue
+
+            board = self.board.copy()
+            board.play(move)
+
+            #TODO: do not create sibling node
+            #TODO: re-read mcts-o options
+            #TODO: add gamma correction to backup
+            new_node = Node(board)
+            new_edge = Edge(1, self, new_node)
+
+            new_node.set_parent_edge(new_edge)
+            self.child_edges[move] = new_edge
 
         while not option.finished and not node.is_leaf():
             option_action = option.get_action(node.board)
@@ -109,38 +140,50 @@ cdef class Node:
             node.edge_count_sum += 1
             node.expanded = True
 
-            # if option_action in node.child_edges.keys():
-            #     print('NAO deveria')
+            if option_action in node.child_edges.keys() and node.child_edges[option_action].get_child().expanded:
+                print('NAO deveria')
 
-            for move in node.board.legal_moves():
+            board_copy = node.board.copy()
+            board_copy.play(option_action)
 
-                if move in node.child_edges.keys() and node.child_edges[move] is not None:
-                    continue
+            new_node = Node(board_copy)
+            new_edge = Edge(1, node, new_node)
+            new_node.set_parent_edge(new_edge)
+            node.child_edges[option_action] = new_edge
+            node = new_node
 
-                board = node.board.copy()
-                board.play(move)
+            # for move in node.board.legal_moves():
+            #     if move in node.child_edges.keys() and node.child_edges[move] is not None:
+            #         continue
 
-                #TODO: do not create sibling node
-                #TODO: re-read mcts-o options
-                #TODO: add gamma correction to backup
-                new_node = Node(board)
-                new_edge = Edge(1, node, new_node)
+            #     board = node.board.copy()
+            #     board.play(move)
 
-                new_node.set_parent_edge(new_edge)
-                node.child_edges[move] = new_edge
+            #     #TODO: do not create sibling node
+            #     #TODO: re-read mcts-o options
+            #     #TODO: add gamma correction to backup
+            #     new_node = Node(board)
+            #     new_edge = Edge(1, node, new_node)
 
-            node = node.child_edges[option_action].get_child()
+            #     new_node.set_parent_edge(new_edge)
+            #     node.child_edges[move] = new_edge
+
+            # node = node.child_edges[option_action].get_child()
 
         # this is important so option can run again 
         option.finished = False
 
-        #TODO: double check no noise
-        cdef double score = node.board.get_oracle_score() -21
-        cdef double noisy_score = np.random.normal(node.board.get_oracle_score(), 15)
+        cdef parent_node = node.get_parent_edge().get_parent()
+        cdef double score = parent_node.board.get_oracle_score()
+        cdef double noisy_score = np.random.normal(score, 15)
         #cdef double score = node.simulate()
 
+        cdef double result = min(score, noisy_score)
+        #cdef double result = noisy_score
 
-        return min(score, noisy_score)
+        parent_node.backprop(result)
+
+        return noisy_score
 
     cpdef double simulate(self):
         cdef simulationboard = self.board.copy()

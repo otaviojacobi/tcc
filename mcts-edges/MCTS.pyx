@@ -15,8 +15,8 @@ cdef class MCTS:
         cdef double value
         for _ in range(simulations):
             node = self.search(c)
-            value = node.expand()
-            node.backprop(value)
+            node.expand()
+            #node.backprop(value)
 
         return self.root.get_most_visisted_child()
 
