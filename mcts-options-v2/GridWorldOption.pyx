@@ -15,6 +15,7 @@ cdef class GridWorldOption:
 
     cdef set activate_positions
     cdef public int8_t primitive
+    cdef public bint executed
 
     cdef public int8_t opt_id
 
@@ -23,8 +24,18 @@ cdef class GridWorldOption:
         self.activate_positions = activate_positions
         self.opt_id = opt_id
         self.primitive = primitive
+        self.executed = False
+
+    def __hash__(self):
+      return self.opt_id
+
+    def __eq__(self, other):
+      return self.opt_id == other.opt_id
 
     cpdef bint is_valid_option(self, object grid_world):
+
+        if self.primitive != -1:
+            return True
 
         # do not allow for options that take you to the same place
         # TODO: be careful about single step actions
@@ -39,14 +50,18 @@ cdef class GridWorldOption:
     # CAUTION ! this function returns -1 when the option finishes !
     cpdef int8_t get_action(self, object grid_world):
 
+        if self.primitive != -1:
+            if self.executed:
+              return -1
+            else:
+              self.executed = True
+              return self.primitive
+
         x, y = grid_world.cur_x, grid_world.cur_y
         gx, gy = self._final_x, self._final_y
 
         if x == gx and y == gy:
           return -1
-
-        if self.primitive != -1:
-            return self.primitive
 
         cdef list stack = list()
         cdef object run_board = grid_world.copy()
@@ -59,12 +74,12 @@ cdef class GridWorldOption:
         g_score[(x, y)] = 0
 
         f_score = defaultdict(self._inf)
-        f_score[(x, y)] = self.h((x, y), (gx, gy))
+        f_score[(x, y)] = self._h((x, y), (gx, gy))
 
         cdef object current
         while len(open_set) != 0:
 
-            current = self.lowest(open_set, f_score)
+            current = self._lowest(open_set, f_score)
             x, y = current
             if x == gx and y == gy:
                 return self._first_action(came_from, current)
@@ -92,12 +107,12 @@ cdef class GridWorldOption:
                 if tentative_g_score < g_score[(neib_x, neib_y)]:
                     came_from[(neib_x, neib_y)] = (x, y)
                     g_score[(neib_x, neib_y)] = tentative_g_score
-                    f_score[(neib_x, neib_y)] = g_score[(neib_x, neib_y)] + self.h((neib_x, neib_y), (gx, gy)) #TODO: h(neib)
+                    f_score[(neib_x, neib_y)] = g_score[(neib_x, neib_y)] + self._h((neib_x, neib_y), (gx, gy)) #TODO: _h(neib)
 
                     if (neib_x, neib_y) not in open_set:
                         open_set.add((neib_x, neib_y))
 
-    cpdef object lowest(self, set open_set, object f_score):
+    cpdef object _lowest(self, set open_set, object f_score):
         cdef double high = INFINITY
         cdef object best_node
         for node in open_set:
@@ -107,7 +122,7 @@ cdef class GridWorldOption:
 
         return best_node
 
-    cpdef int h(self, tuple cur, tuple goal):
+    cpdef int _h(self, tuple cur, tuple goal):
         return abs(cur[0] - goal[0]) + abs(cur[1] - goal[1])
 
     cpdef double _inf(self):
