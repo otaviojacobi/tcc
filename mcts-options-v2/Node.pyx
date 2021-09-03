@@ -1,7 +1,7 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from libc.stdint cimport uint16_t, int8_t
+from libc.stdint cimport uint32_t, int8_t
 from libc.math cimport INFINITY
 
 from random import choice, shuffle
@@ -16,7 +16,7 @@ cdef class Node:
 
     cdef public bint is_leaf
     cdef public bint expanded
-    cdef public uint16_t edge_count_sum
+    cdef public uint32_t edge_count_sum
     cdef public double state_value
 
     cdef public set unexpanded_options
@@ -54,9 +54,9 @@ cdef class Node:
         return best_edge.get_child()
 
     cpdef object get_most_visisted_child(self):
-        cdef uint16_t higher_count = 0
+        cdef uint32_t higher_count = 0
 
-        cdef uint16_t count
+        cdef uint32_t count
         cdef int8_t most_visited_move = -1
 
         for action, edge in self.child_edges.items():
@@ -93,16 +93,23 @@ cdef class Node:
         cdef int8_t action
 
         cdef object option = choice(tuple(self.unexpanded_options))
+
+        #print('id', option.opt_id)
+
+        option.executed = False
         cdef object env_copy = self.env.copy()
+        cdef double cum_r = 0
+
         while True:
             action = option.get_action(env_copy)
             if action == -1 or env_copy.finished():
               break
 
-            env_copy.step(action)
+            _, r, _ = env_copy.step(action)
+            cum_r += r
 
         cdef object new_node = Node(env_copy, self.options)
-        cdef object new_edge = Edge(1, self, new_node)
+        cdef object new_edge = Edge(1, self, new_node, cum_r)
         new_node.parent_edge = new_edge
         self.child_edges[option.opt_id] = new_edge
         self.edge_count_sum += 1
@@ -119,19 +126,25 @@ cdef class Node:
 
         cdef list moves = simulationEnv.legal_moves()
         cdef int8_t move
-
+        cdef double total_return = 0
         while not simulationEnv.finished():
             move = choice(moves)
-            simulationEnv.step(move)
+            _, r, _  = simulationEnv.step(move)
             moves = simulationEnv.legal_moves()
+
+            total_return += r
         
-        return simulationEnv.get_score()
+        return total_return
 
     cpdef void backprop(self, double value):
         cdef object cur_edge = self.parent_edge
+        cdef double gamma = 0.99
 
+        cdef double total_cost = 0
+        #cdef double G = cur_edge.cost + value
         while cur_edge != None:
-            cur_edge.update(value)
+            total_cost += cur_edge.cost
+            cur_edge.update(total_cost + value)
             cur_edge = cur_edge.get_parent().parent_edge
 
     cpdef void info(self, double c):

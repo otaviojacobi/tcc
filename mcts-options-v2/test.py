@@ -73,15 +73,43 @@ def run_single_sim_options(sims, smooth, cputc):
       GridWorldOption((11, 11), {'all'}, 6)
     ]
 
+
+    TIME_LIMIT = sims
     env = GridWorld(env_map)
+    pre_booted = False
     while not env.finished():
-        mcts = MCTS(env, options)
-        option, sim = mcts.run(sims, cputc)
+        if not pre_booted:
+            mcts = MCTS(env, options)
+
+        option, _ = mcts.run(TIME_LIMIT, cputc)
+        option.executed = False
+        env_copy = env.copy()
+        steps = 0
+        while True:
+            action = option.get_action(env_copy)
+            if env_copy.finished() or action == -1:
+                break
+            env_copy.step(action)
+            steps += 1
+
+        option.executed = False
+
+        mcts = MCTS(env_copy, options)
+        total_runs = 0
         while True:
             action = option.get_action(env)
             if env.finished() or action == -1:
                 break
             env.step(action)
+            _, runs = mcts.run(TIME_LIMIT-1, cputc)
+            total_runs += runs
+
+        if env.cur_x == env_copy.cur_x and env.cur_y == env_copy.cur_y:
+            pre_booted = True
+        else:
+            pre_booted = False
+
+        option.executed = False
 
     return env.get_score()
 
@@ -116,15 +144,43 @@ def run_single_sim_doors(sims, smooth, cputc):
       GridWorldOption((11,8), set(third_room_pos + fourth_room_pos + [(6,3)] + [(6,13)]), 7),
     ]
 
+
+    TIME_LIMIT = sims
     env = GridWorld(env_map)
+    pre_booted = False
     while not env.finished():
-        mcts = MCTS(env, options)
-        option, sim = mcts.run(sims, cputc)
+        if not pre_booted:
+            mcts = MCTS(env, options)
+
+        option, _ = mcts.run(TIME_LIMIT, cputc)
+        option.executed = False
+        env_copy = env.copy()
+        steps = 0
+        while True:
+            action = option.get_action(env_copy)
+            if env_copy.finished() or action == -1:
+                break
+            env_copy.step(action)
+            steps += 1
+
+        option.executed = False
+
+        mcts = MCTS(env_copy, options)
+        total_runs = 0
         while True:
             action = option.get_action(env)
             if env.finished() or action == -1:
                 break
             env.step(action)
+            _, runs = mcts.run(TIME_LIMIT-1, cputc)
+            total_runs += runs
+
+        if env.cur_x == env_copy.cur_x and env.cur_y == env_copy.cur_y:
+            pre_booted = True
+        else:
+            pre_booted = False
+
+        option.executed = False
 
     return env.get_score()
 
@@ -150,12 +206,10 @@ print('RESULT 1', out)
 print('RESULT 2', out2)
 print('RESULT 3', out3)
 
-plt.title('MCTS-O: Action on Env with Options (No Pre-Fetching)')
+plt.title('MCTS-O: Action on Env with Options (with pre-fetching)')
 
 plt.ylabel('Average Total Return')
 plt.xlabel('MCTS Thinking time (ms)')
-#plt.xlabel('MCTS Simulations')
-
 
 plt.plot(SIM_RANGE, out, label='primitive options')
 plt.plot(SIM_RANGE, out2, label='random options')

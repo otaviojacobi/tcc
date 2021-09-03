@@ -23,7 +23,7 @@ cdef class MCTS:
             node = node.expand()
             #value = node.simulate()
             score = node.env.get_oracle_score()
-            noisy_score = np.random.normal(score, 4)
+            noisy_score = np.random.normal(score, 2)
             value =  min(score, noisy_score)
             node.backprop(value)
 

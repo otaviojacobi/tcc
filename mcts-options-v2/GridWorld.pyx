@@ -61,7 +61,7 @@ cdef class GridWorld:
         print('\n'.join(lines))
 
     cpdef ((int, int), double, bint) step(self, int8_t move):
-        if self.is_over:
+        if self.is_over or self.cur_x == self.goal_x and self.cur_y == self.goal_y:
             return (self.cur_x, self.cur_y), 0.0, True
 
         possible_x = self.cur_x
@@ -76,13 +76,15 @@ cdef class GridWorld:
             possible_y -= 1
         else:
             print('Tried to play unknown action ', move)
-            exit(-1)
+
 
         if (possible_x, possible_y) in self.possible_positions:
             self.cur_x, self.cur_y = possible_x, possible_y
 
         if self.cur_x == self.goal_x and self.cur_y == self.goal_y:
+            self.score -= 1.0
             self.is_over = True
+            return (self.cur_x, self.cur_y), -1.0, True
         else:
             self.score -= 1.0
 
@@ -135,8 +137,8 @@ cdef class GridWorld:
     # It returns -MIN_NUMBER_STEPS to reach the goal G from current position
     cpdef double get_oracle_score(self):
 
-        if self.is_over:
-            return 0
+        # if self.is_over:
+        #     return 0
 
         x, y = self.cur_x, self.cur_y
         gx, gy = self.goal_x, self.goal_y
