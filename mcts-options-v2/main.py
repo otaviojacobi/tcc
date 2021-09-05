@@ -30,29 +30,29 @@ options = [
 ]
 
 TIME_LIMIT = 30
-cputc = 20
+cputc = 2
 
 env = GridWorld(env_map)
 mcts = MCTS(env, options)
+mcts.learn(20, cputc)
+mcts.root.info(cputc)
+# while not env.finished():
+#     mcts = MCTS(env, options)
+#     option, _ = mcts.learn(TIME_LIMIT, cputc)
+#     #option = choice(options)
+#     total = 0
+#     option.executed = False
+#     while True:
+#         action = option.get_action(env)
+
+#         if action == -1 or env.finished():
+#             break
+#         env.step(action)
+#         total -= 1
+#     option.executed = False
+
 
 #mcts.root.info(cputc)
-while not env.finished():
-    mcts = MCTS(env, options)
-    option, _ = mcts.learn(TIME_LIMIT, cputc)
-    #option = choice(options)
-    total = 0
-    option.executed = False
-    while True:
-        action = option.get_action(env)
 
-        if action == -1 or env.finished():
-            break
-        env.step(action)
-        total -= 1
-    option.executed = False
-
-
-#mcts.root.info(cputc)
-
-print(total)
+#print(total)
 print(env.get_score())

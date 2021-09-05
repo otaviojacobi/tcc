@@ -14,18 +14,31 @@ cdef class MCTS:
     cdef public object root
     cdef public list options
 
-    cdef public object g
+    cdef public dict g
     cdef public object f
+    cdef public dict stats
+
+    cdef public double maxi
+    cdef public double mini
 
     def __init__(self, object env, list options):
         self.root = Node(env.copy(), options)
         self.options = deepcopy(options)
         self.g = {}
         self.f = defaultdict(float)
+        self.stats = {}
+
+        self.maxi = 0
+        self.mini = 1
 
     def reset(self, object env):
         self.root = Node(env.copy(), self.options)
 
+    def normalize(self, double value):
+        if value < self.mini:
+            self.mini = value
+
+        return (value - self.mini) / (self.maxi - self.mini)
 
     def learn(self, uint16_t simulations, double c):
         cdef object node
@@ -51,7 +64,13 @@ cdef class MCTS:
 
             self.g[(prev_node.env.copy(), opt_id)] = (node.env.copy(), r)
             value = node.simulate()
-            self.f[node.env] = self.f[node.env] + 0.1 * (value - self.f[node.env])
+            if node.env not in self.stats.keys():
+                self.stats[node.env] = [value, 1]
+            else:
+                self.stats[node.env] = [self.stats[node.env][0] + value, self.stats[node.env][1] + 1]
+
+            #self.f[node.env] = self.f[node.env] + 0.1 * (value - self.f[node.env])
+            self.f[node.env] = self.stats[node.env][0] / float(self.stats[node.env][1])
             node.backprop(self.f[node.env])
 
             cur = time.time() * 1000
@@ -123,7 +142,7 @@ cdef class MCTS:
         return cur_node
 
     cpdef void save(self, str path):
-        cpdef dict model = {'f': self.f, 'g': self.g}
+        cpdef dict model = {'f': self.f, 'g': self.g, 'stats': self.stats}
         with open(path, 'wb') as f:
             pickle.dump(model, f)
 
@@ -132,4 +151,4 @@ cdef class MCTS:
         with open(path, 'rb') as f:
             model = pickle.load(f)
 
-        self.f, self.g = model['f'], model['g']
+        self.f, self.g, self.stats = model['f'], model['g'], model['stats']

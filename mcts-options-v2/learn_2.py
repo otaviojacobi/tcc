@@ -27,14 +27,14 @@ options = [
     GridWorldOption((11,8), set(third_room_pos + fourth_room_pos + [(6,3)] + [(6,13)]), 7),
 ]
 
-TIME_LIMIT = 100
+TIME_LIMIT = 30
 cputc = 20
 
 env = GridWorld(env_map)
 mcts = MCTS(env, options)
 
 results = []
-for learning in range(1000):
+for learning in range(100):
     print(learning)
     env = GridWorld(env_map)
     total = 0
@@ -56,7 +56,7 @@ for learning in range(1000):
     print(total)
     print(env.get_score())
 
-with open('results/door_100_steps.pickle', 'wb') as f:
+with open('results/door_30_steps.pickle', 'wb') as f:
     pickle.dump(results, f)
 
-mcts.save('models/door_100_steps.pickle')
+mcts.save('models/door_30_steps.pickle')
