@@ -35,9 +35,6 @@ cdef class MCTS:
         self.root = Node(env.copy(), self.options)
 
     def normalize(self, double value):
-        if value < self.mini:
-            self.mini = value
-
         return (value - self.mini) / (self.maxi - self.mini)
 
     def learn(self, uint16_t simulations, double c):
@@ -71,7 +68,10 @@ cdef class MCTS:
 
             #self.f[node.env] = self.f[node.env] + 0.1 * (value - self.f[node.env])
             self.f[node.env] = self.stats[node.env][0] / float(self.stats[node.env][1])
-            node.backprop(self.f[node.env])
+            mini_q = node.backprop(self.f[node.env])
+
+            if mini_q < self.mini:
+                self.mini = mini_q
 
             cur = time.time() * 1000
             total_time = cur - prev
@@ -137,7 +137,7 @@ cdef class MCTS:
         cdef object cur_node = self.root
 
         while cur_node.is_fully_expanded() and not cur_node.is_leaf:
-            cur_node = cur_node.get_highest_ucb_child(c)
+            cur_node = cur_node.get_highest_ucb_child(c, self.mini)
 
         return cur_node
 
@@ -152,3 +152,10 @@ cdef class MCTS:
             model = pickle.load(f)
 
         self.f, self.g, self.stats = model['f'], model['g'], model['stats']
+
+
+    cpdef void info(self, double c):
+        for action, edge in self.root.child_edges.items():
+            print('Option ID: ', action)
+            edge.info(c, self.mini)
+        print('\n')

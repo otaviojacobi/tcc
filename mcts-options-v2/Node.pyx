@@ -36,7 +36,7 @@ cdef class Node:
     # Everytime we backprop in the tree each edge traversed updates its ucb value and updates the heap
     # So we always keep track of the maximum ucb in first position and this funcion goes from O(n) -> O(1)
     # HOWEVER, this is prob unecessary unless branching factor is really really high
-    cpdef object get_highest_ucb_child(self, double c):
+    cpdef object get_highest_ucb_child(self, double c, double mini_q):
         cdef double highest = -INFINITY
         cdef double ucb = -INFINITY
 
@@ -46,7 +46,7 @@ cdef class Node:
         values = list(self.child_edges.values())
         shuffle(values)
         for edge in values:
-            ucb = edge.ucb(c)
+            ucb = edge.ucb(c, mini_q)
             if ucb > highest:
                 highest = ucb
                 best_edge = edge
@@ -165,21 +165,25 @@ cdef class Node:
         
         return total_return
 
-    cpdef void backprop(self, double value):
+    cpdef double backprop(self, double value):
         cdef object cur_edge = self.parent_edge
         cdef double gamma = 0.99
 
         cdef double total_cost = 0
+        cdef double cur_mini = 10
+        cdef double act_val = 0
+
         #cdef double G = cur_edge.cost + value
         while cur_edge != None:
             total_cost += cur_edge.cost
-            cur_edge.update(total_cost + value) #(value * (0.9) ** abs(total_cost))
+            act_val = cur_edge.update(total_cost + value) #(value * (0.9) ** abs(total_cost))
+
+            if act_val < cur_mini:
+                cur_mini = act_val
+
             cur_edge = cur_edge.get_parent().parent_edge
 
-    cpdef void info(self, double c):
-        for action, edge in self.child_edges.items():
-            print('Option ID: ', action)
-            edge.info(c)
+        return cur_mini
 
     cpdef void set_options(self, list options):
         self.options = deepcopy(options)

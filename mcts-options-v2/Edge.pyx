@@ -37,7 +37,7 @@ cdef class Edge:
     cpdef object get_child(self):
         return self._child_node
 
-    cpdef void update(self, double value):
+    cpdef double update(self, double value):
         #self._action_value = (self._action_value * self._count + G) / (self._count + 1) 
         self._value_sum += value
 
@@ -47,27 +47,35 @@ cdef class Edge:
         self._count += 1
         self._action_value = self._value_sum / (self._count + 1)
 
+        return self._action_value
+
     cpdef uint32_t get_count(self):
         return self._count
 
     cpdef double get_action_value(self):
         return self._action_value
 
-    cpdef double ucb(self, double c):
+    cpdef double ucb(self, double c, double mini_q):
         cdef double total_count = self._parent_node.edge_count_sum
-        cdef exploration_term = (self._prior * sqrt(log(total_count))) / (1 + self._count) # U(s, a)
-        return self._action_value + c * exploration_term
+        cdef exploration_term = sqrt(log(total_count)) / (1 + self._count) # U(s, a)
 
-    cpdef void info(self, double c):
+        cdef double normalized_q = (self._action_value - mini_q) / (0-mini_q)
+
+        return normalized_q + c * exploration_term
+
+    cpdef void info(self, double c, double mini_q):
         cdef double total_count = self._parent_node.edge_count_sum
-        cdef exploration_term = c * (self._prior * sqrt(log(total_count))) / (1 + self._count) # U(s, a)
+        cdef exploration_term = self._prior * sqrt(log(total_count)) / (1 + self._count) # U(s, a)
+        cdef double normalized_q = (self._action_value - mini_q) / (0-mini_q)
 
 
         print('P(s, a): ', self._prior)
         print('N(s, a): ', self._count)
         print('W(s, a): ', self._value_sum)
         print('Q(s, a): ', self._action_value)
+        print('Q_norm(s, a): ', normalized_q)
+
         print('C(s, a): ', self.cost)
 
         print('U(s, a): ', exploration_term)
-        print('UCB: ', self.ucb(c))
+        print('UCB: ', self.ucb(c, mini_q))
