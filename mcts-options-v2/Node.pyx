@@ -85,10 +85,10 @@ cdef class Node:
     cpdef bint is_fully_expanded(self):
       return len(self.unexpanded_options) == 0
 
-    cpdef object expand(self):
+    def expand(self):
 
         if self.is_leaf:
-            return self
+            return self, self, -1, 0
 
         cdef int8_t action
 
@@ -118,7 +118,36 @@ cdef class Node:
         self.unexpanded_options.remove(option)
         option.executed = False
 
-        return new_node
+        return self, new_node, option.opt_id, cum_r
+
+    def expand_with_model(self, model):
+
+        if self.is_leaf:
+            return self, self, 0
+
+        cdef int8_t action
+
+        cdef object option = choice(tuple(self.unexpanded_options))
+
+        #print('id', option.opt_id)
+
+        option.executed = False
+        cdef object env_copy = self.env.copy()
+        cdef double cum_r = 0
+
+        env_copy, cum_r = model[(self.env, option.opt_id)]
+
+        cdef object new_node = Node(env_copy, self.options)
+        cdef object new_edge = Edge(1, self, new_node, cum_r)
+        new_node.parent_edge = new_edge
+        self.child_edges[option.opt_id] = new_edge
+        self.edge_count_sum += 1
+
+
+        self.unexpanded_options.remove(option)
+        option.executed = False
+
+        return self, new_node, option.opt_id
 
 
     cpdef double simulate(self):
@@ -144,7 +173,7 @@ cdef class Node:
         #cdef double G = cur_edge.cost + value
         while cur_edge != None:
             total_cost += cur_edge.cost
-            cur_edge.update(total_cost + value)
+            cur_edge.update(total_cost + value) #(value * (0.9) ** abs(total_cost))
             cur_edge = cur_edge.get_parent().parent_edge
 
     cpdef void info(self, double c):

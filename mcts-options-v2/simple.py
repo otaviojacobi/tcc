@@ -5,8 +5,8 @@ import ray
 
 import matplotlib.pyplot as plt
 
-SIM_RANGE = list(range(12, 40))
-SMOOTH = 20
+SIM_RANGE = list(range(20, 100))
+SMOOTH = 100
 CPUTC = 20
 
 env_map = '''

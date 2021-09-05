@@ -32,6 +32,9 @@ cdef class GridWorldOption:
     def __eq__(self, other):
       return self.opt_id == other.opt_id
 
+    def __repr__(self):
+        return str(self.opt_id)
+
     cpdef bint is_valid_option(self, object grid_world):
 
         if self.primitive != -1:

@@ -47,6 +47,8 @@ def run_single_sim(sims, smooth, cputc):
                 break
             env.step(action)
 
+        option.executed = False
+
     return env.get_score()
 @ray.remote
 def run_smoothed(sims, smooth_factor, cputc):

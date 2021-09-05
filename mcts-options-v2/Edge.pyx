@@ -39,11 +39,13 @@ cdef class Edge:
 
     cpdef void update(self, double value):
         #self._action_value = (self._action_value * self._count + G) / (self._count + 1) 
-        #self._value_sum += value
+        self._value_sum += value
 
         self._parent_node.edge_count_sum += 1
-        self._action_value = (self._count * self._action_value + value) / (self._count + 1)
+        #self._action_value = (self._count * self._action_value + value) / (self._count + 1)
+
         self._count += 1
+        self._action_value = self._value_sum / (self._count + 1)
 
     cpdef uint32_t get_count(self):
         return self._count

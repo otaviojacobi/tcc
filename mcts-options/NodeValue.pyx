@@ -3,6 +3,7 @@
 
 from libc.stdint cimport uint16_t, int8_t
 from libc.math cimport INFINITY
+from libc.math cimport sqrt, log
 
 from random import choice, shuffle
 from Edge import Edge
@@ -16,7 +17,6 @@ cdef class Node:
 
     cdef public bint is_leaf
     cdef public bint expanded
-    cdef public uint16_t edge_count_sum
     cdef public double state_value
 
     cdef public set unexpanded_options
@@ -26,14 +26,15 @@ cdef class Node:
     cdef public double count   # N(s)
 
 
-    def __init__(self, object env, list options):
+    def __init__(self, object env, list options, object parent_node):
         self.env = env
-        self.parent_node = None
+        self.parent_node = parent_node
         self.is_leaf = env.is_leaf()
         self.child_nodes = {}
         self.options = deepcopy(options)
         self.unexpanded_options = set([opt for opt in options if opt.is_valid_option(self.env)])
         self.value = 0.0
+        self.count = 1.0
 
     # TODO: maybe we can avoid this loop by using a heap
     # Everytime we backprop in the tree each edge traversed updates its ucb value and updates the heap
@@ -56,14 +57,17 @@ cdef class Node:
 
         return best_node
 
+    cpdef double ucb(self, double c):
+        return self.value + c * sqrt(log(self.parent_node.count)/self.count)
+
     cpdef object get_most_visisted_child(self):
         cdef uint16_t higher_count = 0
 
         cdef uint16_t count
         cdef int8_t most_visited_move = -1
 
-        for action, edge in self.child_edges.items():
-            count = edge.get_count()
+        for action, node in self.child_nodes.items():
+            count = node.count
             if count > higher_count:
                 most_visited_move = action
                 higher_count = count
@@ -76,9 +80,9 @@ cdef class Node:
         cdef double count
         cdef int8_t most_visited_move = -1
 
-        for action, edge in self.child_edges.items():
+        for action, node in self.child_nodes.items():
             #count = edge.cost + edge.get_action_value()
-            count = edge.get_action_value()
+            count = node.value
             if count > higher_count:
                 most_visited_move = action
                 higher_count = count
@@ -95,7 +99,6 @@ cdef class Node:
 
         cdef object cur_node = self
         cdef object new_node
-        cdef object new_edge
         cdef int8_t action
 
         cdef object option = choice(tuple(self.unexpanded_options))
@@ -106,16 +109,12 @@ cdef class Node:
               break
 
             env_copy.step(action)
-            if action not in cur_node.child_edges.keys():
-              new_node = Node(env_copy, [])
-              new_edge = Edge(1, cur_node, new_node)
-              new_node.parent_edge = new_edge
-              cur_node.child_edges[action] = new_edge
-              cur_node.edge_count_sum += 1
-
+            if action not in cur_node.child_nodes.keys():
+              new_node = Node(env_copy, [], cur_node)
+              cur_node.child_nodes[action] = new_node
               cur_node = new_node
             else:
-              cur_node = cur_node.child_edges[action].get_child()
+              cur_node = cur_node.child_nodes[action]
 
             env_copy = env_copy.copy()
 
@@ -125,7 +124,6 @@ cdef class Node:
         option.executed = False
 
         return cur_node
-
 
     cpdef double simulate(self):
         cdef simulationEnv = self.env.copy()
@@ -141,16 +139,32 @@ cdef class Node:
         return simulationEnv.get_score()
 
     cpdef void backprop(self, double value):
-        cdef object cur_edge = self.parent_edge
+        cdef object cur_node = self
+        cpdef double cur_depth = 0
+        while cur_node != None:
+            cur_depth += 1
+            cur_node.update(value, cur_depth)
+            cur_node = cur_node.parent_node
 
-        while cur_edge != None:
-            cur_edge.update(value)
-            cur_edge = cur_edge.get_parent().parent_edge
+    cpdef void update(self, double value, double depth_dif):
+        self.value = self.value + value * (0.99 ** depth_dif)
+        self.count = self.count + 1
+
 
     cpdef void info(self, double c):
-        for action, edge in self.child_edges.items():
+        self.basic_info(c)
+        for action, node in self.child_nodes.items():
             print('Action: ', action)
-            edge.info(c)
+            node.basic_info(c)
+
+    cpdef void basic_info(self, double c):
+        print('N(s): ', self.count)
+        print('V(s): ', self.value)
+        if self.parent_node != None:
+            print('UCB: ', self.ucb(c))
+        else:
+            print('First node has no UCB')
+
 
     cpdef void set_options(self, list options):
         self.options = deepcopy(options)

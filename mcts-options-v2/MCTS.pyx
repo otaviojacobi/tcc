@@ -25,18 +25,18 @@ cdef class MCTS:
         cdef double prev = time.time() * 1000
         cdef double cur
         cdef int total_sims = 0
-        while total_time < simulations - 3:
-        #for sim in range(simulations):
+        #while total_time < simulations - 3:
+        for sim in range(simulations):
             node = self.search(c)
-            node = node.expand()
+            _, node, _, _ = node.expand()
             #if not node.is_leaf:
-            #score = node.env.get_oracle_score()
+            score = node.env.get_oracle_score()
             #print('predicted score', score)
-            #noisy_score = np.random.normal(score, 0)
-            #value =  min(score, noisy_score)
+            noisy_score = np.random.normal(score, 2)
+            value =  min(score, noisy_score)
             #print('value', value)
             #print('cost', node.env.score)
-            value = node.simulate()
+            #value = node.simulate()
             # else:
             #     value = 0
             node.backprop(value)

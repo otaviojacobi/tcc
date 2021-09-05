@@ -49,6 +49,19 @@ cdef class GridWorld:
         self.is_over = False
         self.score = 0.0
 
+    def __hash__(self):
+      return hash((self.cur_x, self.cur_y))
+
+    def __eq__(self, other):
+      return self.cur_x == other.cur_x and self.cur_y == other.cur_y
+
+    def __repr__(self):
+        return str((self.cur_x, self.cur_y))
+
+
+    cpdef (int, int) state(self):
+        return (self.cur_x, self.cur_y)
+
     cpdef void render(self):
         cdef list lines = self.grid_map.strip('\n ').split('\n')
 

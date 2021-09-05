@@ -2,7 +2,7 @@
 # cython: language_level=3
 from libc.stdint cimport int8_t, uint16_t
 
-from Node import Node
+from NodeValue import Node
 
 import numpy as np
 
@@ -10,7 +10,9 @@ cdef class MCTS:
     cdef public object root
 
     def __init__(self, object env, list options):
-        self.root = Node(env.copy(), options)
+        #self.root = Node(env.copy(), options)
+        self.root = Node(env.copy(), options, None)
+
 
     cpdef object run(self, uint16_t simulations, double c):
         cdef object node
@@ -23,7 +25,7 @@ cdef class MCTS:
             node = node.expand()
             #value = node.simulate()
             score = node.env.get_oracle_score()
-            noisy_score = np.random.normal(score, 2)
+            noisy_score = np.random.normal(score, 10)
             value =  min(score, noisy_score)
             node.backprop(value)
 
@@ -37,3 +39,6 @@ cdef class MCTS:
             cur_node = cur_node.get_highest_ucb_child(c)
 
         return cur_node
+
+    cpdef void set_new_head(self, int action_id):
+        self.root = self.root.child_nodes[action_id]
