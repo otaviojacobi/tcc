@@ -27,8 +27,8 @@ options = [
 #     GridWorldOption((11,8), set(third_room_pos + fourth_room_pos + [(6,3)] + [(6,13)]), 7),
 ]
 
-TIME_LIMIT = 30
-cputc = 20
+TIME_LIMIT = 100
+cputc = 2
 
 env = GridWorld(env_map)
 mcts = MCTS(env, options)
@@ -39,7 +39,7 @@ for learning in range(100):
     env = GridWorld(env_map)
     total = 0
     while not env.finished():
-        mcts.reset(env)
+        mcts = MCTS(env, options)
         option, _ = mcts.learn(TIME_LIMIT, cputc)
         option.executed = False
         while True:

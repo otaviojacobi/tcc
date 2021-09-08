@@ -23,10 +23,10 @@ options = [
     GridWorldOption((0, 0),   {'all'}, 3, 3),
     #GridWorldOption((9, 12),   {'all'}, 8),
 
-    # GridWorldOption((3,8),  set(first_room_pos + second_room_pos + [(6,3)] + [(6,13)]), 4),
-    # GridWorldOption((6,3),  set(first_room_pos + third_room_pos + [(3,8)] + [(11,8)]), 5),
-    # GridWorldOption((6,13), set(second_room_pos + fourth_room_pos + [(3,8)] + [(11,8)]), 6),
-    # GridWorldOption((11,8), set(third_room_pos + fourth_room_pos + [(6,3)] + [(6,13)]), 7),
+    GridWorldOption((3,8),  set(first_room_pos + second_room_pos + [(6,3)] + [(6,13)]), 4),
+    GridWorldOption((6,3),  set(first_room_pos + third_room_pos + [(3,8)] + [(11,8)]), 5),
+    GridWorldOption((6,13), set(second_room_pos + fourth_room_pos + [(3,8)] + [(11,8)]), 6),
+    GridWorldOption((11,8), set(third_room_pos + fourth_room_pos + [(6,3)] + [(6,13)]), 7),
 ]
 
 TIME_LIMIT = 100
@@ -36,7 +36,10 @@ env = GridWorld(env_map)
 mcts = MCTS(env, options)
 mcts.learn(TIME_LIMIT, cputc)
 mcts.info(cputc)
+#print(mcts.mini)
+#print(mcts.maxi)
 while not env.finished():
+    #mcts = MCTS(env, options)
     mcts.reset(env)
     option, _ = mcts.learn(TIME_LIMIT, cputc)
     #option = choice(options)
@@ -49,6 +52,10 @@ while not env.finished():
             break
         env.step(action)
         total -= 1
+        env.render()
+        print('\n')
+
+        time.sleep(0.1)
     option.executed = False
 
 

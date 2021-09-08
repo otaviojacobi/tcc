@@ -36,7 +36,7 @@ cdef class Node:
     # Everytime we backprop in the tree each edge traversed updates its ucb value and updates the heap
     # So we always keep track of the maximum ucb in first position and this funcion goes from O(n) -> O(1)
     # HOWEVER, this is prob unecessary unless branching factor is really really high
-    cpdef object get_highest_ucb_child(self, double c, double mini_q):
+    cpdef object get_highest_ucb_child(self, double c, double mini_q, double maxi_q):
         cdef double highest = -INFINITY
         cdef double ucb = -INFINITY
 
@@ -46,7 +46,7 @@ cdef class Node:
         values = list(self.child_edges.values())
         shuffle(values)
         for edge in values:
-            ucb = edge.ucb(c, mini_q)
+            ucb = edge.ucb(c, mini_q, maxi_q)
             if ucb > highest:
                 highest = ucb
                 best_edge = edge
@@ -57,7 +57,7 @@ cdef class Node:
         cdef uint32_t higher_count = 0
 
         cdef uint32_t count
-        cdef int8_t most_visited_move = -1
+        cdef object most_visited_move
 
         for action, edge in self.child_edges.items():
             count = edge.get_count()
@@ -156,34 +156,47 @@ cdef class Node:
         cdef list moves = simulationEnv.legal_moves()
         cdef int8_t move
         cdef double total_return = 0
+
+        cdef bint done = False
         while not simulationEnv.finished():
             move = choice(moves)
-            _, r, _  = simulationEnv.step(move)
+            _, r, done  = simulationEnv.step(move)
+
+            if done:
+                break
+
             moves = simulationEnv.legal_moves()
 
             total_return += r
         
         return total_return
 
-    cpdef double backprop(self, double value):
+    cpdef (double, double) backprop(self, double value):
         cdef object cur_edge = self.parent_edge
         cdef double gamma = 0.99
 
         cdef double total_cost = 0
-        cdef double cur_mini = 10
+        cdef double cur_mini = 999999
+        cdef double cur_maxi = -999999
+
         cdef double act_val = 0
 
         #cdef double G = cur_edge.cost + value
+        cdef double steps = 0
         while cur_edge != None:
             total_cost += cur_edge.cost
-            act_val = cur_edge.update(total_cost + value) #(value * (0.9) ** abs(total_cost))
+            act_val = cur_edge.update(total_cost + value) #cur_edge.update(total_cost + gamma * value)
 
             if act_val < cur_mini:
                 cur_mini = act_val
 
+            if act_val > cur_maxi:
+                cur_maxi = act_val
+
+            steps += 1
             cur_edge = cur_edge.get_parent().parent_edge
 
-        return cur_mini
+        return cur_mini, cur_maxi
 
     cpdef void set_options(self, list options):
         self.options = deepcopy(options)

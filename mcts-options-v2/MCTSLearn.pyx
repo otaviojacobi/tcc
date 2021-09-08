@@ -28,11 +28,13 @@ cdef class MCTS:
         self.f = defaultdict(float)
         self.stats = {}
 
-        self.maxi = 0
-        self.mini = 1
+        self.maxi = -999999
+        self.mini = 999999
 
     def reset(self, object env):
         self.root = Node(env.copy(), self.options)
+        self.maxi = -999999
+        self.mini = 999999
 
     def normalize(self, double value):
         return (value - self.mini) / (self.maxi - self.mini)
@@ -66,12 +68,16 @@ cdef class MCTS:
             else:
                 self.stats[node.env] = [self.stats[node.env][0] + value, self.stats[node.env][1] + 1]
 
-            #self.f[node.env] = self.f[node.env] + 0.1 * (value - self.f[node.env])
+            self.f[node.env] = self.f[node.env] + 0.1 * (value - self.f[node.env])
             self.f[node.env] = self.stats[node.env][0] / float(self.stats[node.env][1])
-            mini_q = node.backprop(self.f[node.env])
+            mini_q, maxi_q = node.backprop(self.f[node.env])
+            #mini_q, maxi_q = node.backprop(value)
 
             if mini_q < self.mini:
                 self.mini = mini_q
+
+            if maxi_q > self.maxi:
+                self.maxi = maxi_q
 
             cur = time.time() * 1000
             total_time = cur - prev
@@ -137,12 +143,12 @@ cdef class MCTS:
         cdef object cur_node = self.root
 
         while cur_node.is_fully_expanded() and not cur_node.is_leaf:
-            cur_node = cur_node.get_highest_ucb_child(c, self.mini)
+            cur_node = cur_node.get_highest_ucb_child(c, self.mini, self.maxi)
 
         return cur_node
 
     cpdef void save(self, str path):
-        cpdef dict model = {'f': self.f, 'g': self.g, 'stats': self.stats}
+        cpdef dict model = {'f': self.f, 'g': self.g, 'stats': self.stats, 'mini': self.mini}
         with open(path, 'wb') as f:
             pickle.dump(model, f)
 
@@ -151,11 +157,11 @@ cdef class MCTS:
         with open(path, 'rb') as f:
             model = pickle.load(f)
 
-        self.f, self.g, self.stats = model['f'], model['g'], model['stats']
+        self.f, self.g, self.stats, self.mini = model['f'], model['g'], model['stats'], model['mini']
 
 
     cpdef void info(self, double c):
         for action, edge in self.root.child_edges.items():
             print('Option ID: ', action)
-            edge.info(c, self.mini)
+            edge.info(c, self.mini, self.maxi)
         print('\n')

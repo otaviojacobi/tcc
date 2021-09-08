@@ -26,8 +26,8 @@ options = [
     GridWorldOption((11, 11), {'all'}, 6)
 ]
 
-TIME_LIMIT = 30
-cputc = 20
+TIME_LIMIT = 100
+cputc = 4
 
 env = GridWorld(env_map)
 mcts = MCTS(env, options)
@@ -38,7 +38,7 @@ for learning in range(100):
     env = GridWorld(env_map)
     total = 0
     while not env.finished():
-        mcts.reset(env)
+        mcts = MCTS(env, options)
         option, _ = mcts.learn(TIME_LIMIT, cputc)
         option.executed = False
         while True:

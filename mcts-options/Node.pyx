@@ -133,12 +133,14 @@ cdef class Node:
         cdef list moves = simulationEnv.legal_moves()
         cdef int8_t move
 
+        cdef double total_return = 0
         while not simulationEnv.finished():
             move = choice(moves)
-            simulationEnv.step(move)
+            _, r, _ = simulationEnv.step(move)
+            total_return += r
             moves = simulationEnv.legal_moves()
         
-        return simulationEnv.get_score()
+        return total_return
 
     cpdef void backprop(self, double value):
         cdef object cur_edge = self.parent_edge

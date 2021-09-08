@@ -30,13 +30,13 @@ cdef class MCTS:
             node = self.search(c)
             _, node, _, _ = node.expand()
             #if not node.is_leaf:
-            score = node.env.get_oracle_score()
+            #score = node.env.get_oracle_score()
             #print('predicted score', score)
-            noisy_score = np.random.normal(score, 2)
-            value =  min(score, noisy_score)
+            #noisy_score = np.random.normal(score, 2)
+            #value =  min(score, noisy_score)
             #print('value', value)
             #print('cost', node.env.score)
-            #value = node.simulate()
+            value = node.simulate()
             # else:
             #     value = 0
             node.backprop(value)

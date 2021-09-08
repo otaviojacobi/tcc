@@ -49,6 +49,9 @@ cdef class Edge:
     cpdef double ucb(self, double c):
         cdef double total_count = self._parent_node.edge_count_sum
         cdef exploration_term = (self._prior * sqrt(log(total_count))) / (1 + self._count) # U(s, a)
+
+        cdef normalize_action_value = (self._action_value + 200) / 200
+
         return self._action_value + c * exploration_term
 
     cpdef void info(self, double c):
