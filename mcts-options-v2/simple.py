@@ -31,10 +31,10 @@ def run_single_sim(sims, smooth, cputc):
 
     options = [
       # primitives, (0,0) is meaningless
-      GridWorldOption((0, 0),  {'all'}, 0, 0),
-      GridWorldOption((0, 0),  {'all'}, 1, 1),
-      GridWorldOption((0, 0),  {'all'}, 2, 2),
-      GridWorldOption((0, 0),  {'all'}, 3, 3),
+      GridWorldOption((0, 0), {'all'}, 0, 0),
+      GridWorldOption((0, 0), {'all'}, 1, 1),
+      GridWorldOption((0, 0), {'all'}, 2, 2),
+      GridWorldOption((0, 0), {'all'}, 3, 3),
     ]
 
     env = GridWorld(env_map)

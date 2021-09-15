@@ -8,6 +8,7 @@ import pickle
 import numpy as np
 
 from tqdm import tqdm
+from copy import deepcopy
 
 class MuZero:
     def __init__(self, env, options):
@@ -17,58 +18,87 @@ class MuZero:
         self.f = PredictionModel(options)
         self.h = RepresentationModel()
 
-    def learn(self, epochs, simulations=100, verbose=False):
+    def learn(self, epochs, simulations=100, verbose=False, alpha=0.01):
 
         returns = []
         for epoch in tqdm(range(epochs)):
             done = False
             rewards = []
             observe_buffer = []
-            self.env.reset()
+            s_next = self.env.reset()
             steps = 0
+            undiscounted_return = 0
+
             while True:
-                s0 = self.h.forward(self.env)
+                s0 = s_next
 
                 mcts = MCTS(s0, self.f, self.g, self.options)
                 pi = mcts.run_sim(simulations)
 
                 opt = choice(self.options, 1, p=pi)[0]
-                action = opt.action #for simplicity for now
 
-                s, r, done = self.env.step(action)
-                rewards.append(r)
+                counter = 0
+                gamma = 0.99
+                inner_rewards = []
+                while True:
+                    action, should_finish = opt.get_action(self.env)
 
-                s_next = self.h.forward(self.env)
+                    if action == -1:
+                        break
 
-                observe_buffer.append([s0, opt, s_next, r, pi])
+                    check_s, r, done = self.env.step(action)
+                    #discounted_reward += (gamma ** counter) * r
+                    inner_rewards.append(r)
+                    undiscounted_return += r
+                    counter += 1
+                    steps += 1
+                    s_next = check_s
 
-                steps += 1
+                    if should_finish:
+                        break
+
+
+                rewards.append(deepcopy(inner_rewards))
+
+                #s_next = self.h.forward(self.env)
+
+                observe_buffer.append([s0, opt, s_next, pi])
+
                 if verbose and steps % 10000 == 1:
                     print(f'[{epoch}/{epochs}] [{steps} steps] [state {self.env.cur_x, self.env.cur_y}] [goal {self.env.goal_x, self.env.goal_y}] [h_dist {abs(self.env.cur_x - self.env.goal_x) + abs(self.env.cur_y - self.env.goal_y)}]')
 
                 if done:
                     break
 
-            returns.append(sum(rewards))
+            returns.append(undiscounted_return)
+
+            #returns.append(sum(rewards))
             #print('total returns', returns)
             # adds Z
+
+            assert len(observe_buffer) == len(rewards)
 
             #print('Updating Z ...')
             for idx in range(len(observe_buffer)):
                 Z = 0
-
                 gamma = 0.99
-                # TODO: remove this for 20k smaller returns
-                for pow, r in enumerate(rewards[idx:idx+20000]):
-                    Z += (gamma ** pow) * r
+                power = 0
+
+                for i, r_list in enumerate(rewards[idx:]):
+                    for r in r_list:
+                        Z += (gamma ** power) * r
+                        power += 1
+                
+                observe_buffer[idx].append(deepcopy(rewards[idx]))
                 observe_buffer[idx].append(Z)
             #print('Finished calculating Z')
 
             #print('Training...')
             for sample in observe_buffer:
-                s0, opt, s1, r, pi, z = sample
-                self.g.observe(s0, opt, s1, r)
-                self.f.observe(s0, pi, z)
+                #print(sample)
+                s0, opt, s1, pi, rs, z = sample
+                self.g.observe(s0, opt, s1, rs)
+                self.f.observe(s0, pi, z, alpha=alpha)
 
             #print('Finished training...')
             
@@ -89,13 +119,18 @@ class MuZero:
             #action = self.options[opt_idex].action #for simplicity for now
 
             opt = np.random.choice(self.options, 1, p=pi)[0]
-            action = opt.action #for simplicity for now
+            
+            while True:
+                action, should_break = opt.get_action(env) #for simplicity for now
 
-            s, r, done = env.step(action)
+                if action == -1 or done:
+                    break
 
-            #print(s)
-            #print(total_return)
-            total_return += r
+                s, r, done = env.step(action)
+                total_return += r
+
+                if should_break:
+                    break
 
         return total_return
 

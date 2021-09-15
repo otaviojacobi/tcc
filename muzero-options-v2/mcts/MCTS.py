@@ -26,7 +26,7 @@ class MCTS:
             edge.R[(s_prev, o)] = r
             edge.S[(s_prev, o)] = s
 
-            #rewards.append(r)
+            rewards.append(r)
 
             new_node, vl = edge.expand(s, self.pred_model, self.dyn_model, self.options)
 

@@ -20,17 +20,25 @@ class MCTS:
 
     def run_sim(self, sims):
         for sim in range(sims):
-            s_prev, o, edge, l, rewards = self.search()
+            s_prev, o, edge, rewards = self.search()
 
-            s, r = self.dyn_model.forward(s_prev, o)
-            edge.R[(s_prev, o)] = r
+            #print('will expand option', o)
+
+            #print(s_prev, o, edge, rewards)
+
+            s, rs = self.dyn_model.forward(s_prev, o)
+            edge.R[(s_prev, o)] = rs
             edge.S[(s_prev, o)] = s
 
-            #rewards.append(r)
+            #print(s_prev, s)
 
+            rewards.append(rs)
             new_node, vl = edge.expand(s, self.pred_model, self.dyn_model, self.options)
 
-            min_q, max_q = new_node.backup(l, vl, rewards)
+            #print('rewards', rewards)
+            #print('vl', vl)
+
+            min_q, max_q = new_node.backup(vl, rewards)
 
             if min_q < self.min_q:
                 self.min_q = min_q
@@ -40,25 +48,26 @@ class MCTS:
 
         pi = []
         for option in self.options:
-            pi.append(self.root.child_edges[option].N)
+            if option in self.root.child_edges:
+                pi.append(self.root.child_edges[option].N)
+            else:
+                pi.append(0)
 
         #TODO: should we use this or logits ?
+        #print(pi)
         return np.array(pi) / sum(pi)
 
     def search(self):
 
         cur_node = self.root
-        l = 0
         rewards = []
-
         while cur_node.expanded and not cur_node.is_leaf:
-            l += 1
             option = cur_node.get_highest_ucb_option(self.c1, self.c2, self.min_q, self.max_q)
             if cur_node.child_edges[option].child_node == None:
-                return cur_node.s, option, cur_node.child_edges[option], l, rewards
+                return cur_node.s, option, cur_node.child_edges[option], rewards
             else:
-                r = cur_node.child_edges[option].R[(cur_node.s, option)]
-                rewards.append(r)
+                rs = cur_node.child_edges[option].R[(cur_node.s, option)]
+                rewards.append(rs)
 
             cur_node = cur_node.child_edges[option].child_node
 

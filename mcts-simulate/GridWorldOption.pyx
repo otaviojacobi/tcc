@@ -35,40 +35,36 @@ cdef class GridWorldOption:
     def __repr__(self):
         return str(self.opt_id)
 
-    cpdef bint is_valid_option(self, object grid_world):
+    cpdef bint is_valid(self, object state):
 
         if self.primitive != -1:
             return True
 
         # do not allow for options that take you to the same place
         # TODO: be careful about single step actions
-        if grid_world.cur_x == self._final_x and grid_world.cur_y == self._final_y:
+        if state[0] == self._final_x and state[1] == self._final_y:
             return False
 
         if 'all' in self.activate_positions:
             return True
 
-        return (grid_world.cur_x, grid_world.cur_y) in self.activate_positions
+        return (state[0], state[1]) in self.activate_positions
 
     # CAUTION ! this function returns -1 when the option finishes !
-    cpdef int8_t get_action(self, object grid_world):
+    cpdef (int8_t, bint) get_action(self, object grid_world):
 
+        #TODO: not STATELESS !!!!
         if self.primitive != -1:
-            if self.executed:
-                self.executed = False
-                return -1
-            else:
-                self.executed = True
-                return self.primitive
+            return self.primitive, True
 
         x, y = grid_world.cur_x, grid_world.cur_y
         gx, gy = self._final_x, self._final_y
 
         if x == gx and y == gy:
-          return -1
+          return -1, True
 
         cdef list stack = list()
-        cdef object run_board = grid_world.copy()
+        cdef object run_board = grid_world
 
         cdef set open_set = set()
         open_set.add((x,y))
@@ -86,7 +82,7 @@ cdef class GridWorldOption:
             current = self._lowest(open_set, f_score)
             x, y = current
             if x == gx and y == gy:
-                return self._first_action(came_from, current)
+                return self._first_action(came_from, current), False
 
             open_set.remove(current)
 
