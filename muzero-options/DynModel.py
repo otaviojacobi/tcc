@@ -37,7 +37,7 @@ class DynModel:
 
         if (s, o) not in self.model_table:
             #print("NAO DEVERIA!!!")
-            return (s, [-1.0])
+            return (s, random.randint(1, 10) * [-1.0])
         
         return self.model_table[(s, o)]
 

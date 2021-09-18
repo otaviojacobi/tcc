@@ -8,7 +8,7 @@ class PredictionModel:
         self.p_table = {}
         self.v_table = {}
 
-    def forward(self, s):
+    def forward(self, s, rewards):
 
         if s not in self.p_table:
             valid_options = {opt for opt in self.options if opt.is_valid(s)}

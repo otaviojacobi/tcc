@@ -1,0 +1,4 @@
+*.cpp
+models/
+model.pickle
+model.pickle.lock

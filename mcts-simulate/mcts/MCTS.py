@@ -15,17 +15,23 @@ class MCTS:
         self.min_q = np.inf
         self.max_q = -np.inf
 
+        self.v = {}
+
     def run_sim(self, sims):
         for sim in range(sims):
             edge, option, rewards = self.search()
             node, rs = edge.expand(option, self.options)
 
             rewards.append(rs)
-
             value = node.simulate()
 
-            min_q, max_q = node.backup(value, rewards)
+            if node.env.state() in self.v:
+                self.v[node.env.state()] = (self.v[node.env.state()][0] + value, self.v[node.env.state()][1] + 1)
+            else:
+                self.v[node.env.state()] = (value, 1)
 
+            value = self.v[node.env.state()][0] / self.v[node.env.state()][1]
+            min_q, max_q = node.backup(value, rewards)
 
             if min_q < self.min_q:
                 self.min_q = min_q

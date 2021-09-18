@@ -44,18 +44,24 @@ class Node:
 
 
     def simulate(self):
-        env = self.env.copy()
-        done = False
-        gamma = 0.99
-        i = 0
-        disc_return = 0.0
-        while not done:
-            _, r, done = env.step(choice([0,1,2,3]))
+        
+        normalize = 1
+        disc_returns = 0.0
+        for _ in range(normalize):
+            env = self.env.copy()
+            done = False
+            gamma = 0.99
+            i = 0
+            disc_return = 0.0
+            while not done:
+                _, r, done = env.step(choice([0,1,2,3]))
 
-            disc_return += (gamma ** i) * r
-            i += 1
+                disc_return += (gamma ** i) * r
+                i += 1
 
-        return disc_return
+            disc_returns += disc_return
+
+        return disc_returns / float(normalize)
 
 
     def backup(self, vl, rewards):
