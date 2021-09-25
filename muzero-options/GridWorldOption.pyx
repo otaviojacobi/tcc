@@ -148,3 +148,41 @@ cdef class GridWorldOption:
             return RIGHT
         elif next_pos[1] - first_pos[1] == -1:
             return LEFT
+
+cdef class GridWorldMacroAction:
+    cdef public int8_t primitive
+    cdef public int8_t cur_count
+    cdef public int8_t repeat
+    cdef public int8_t opt_id
+
+
+    def __init__(self, int8_t primitive, int8_t repeat, int8_t opt_id):
+        self.primitive = primitive
+        self.repeat = repeat
+        self.opt_id = opt_id
+        self.cur_count = 0
+
+    def __hash__(self):
+      return self.opt_id
+
+    def __eq__(self, other):
+      return self.opt_id == other.opt_id
+
+    def __repr__(self):
+        return str(self.opt_id)
+
+    cpdef bint is_valid(self, object state):
+            return True
+
+    # CAUTION ! this function returns -1 when the option finishes !
+    cpdef (int8_t, bint) get_action(self, object grid_world):
+        self.cur_count += 1
+
+        if self.cur_count > self.repeat:
+            print("Macro action state is invalid !!")
+
+        if self.cur_count == self.repeat:
+            self.cur_count = 0
+            return self.primitive, True
+        
+        return self.primitive, False

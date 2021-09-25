@@ -69,6 +69,9 @@ cdef class GridWorld:
 
     cpdef ((int, int), double, bint) step(self, int8_t move):
 
+        if self.cur_x == self.goal_x and self.cur_y == self.goal_y:
+            return (self.cur_x, self.cur_y), 0.0, True
+
         self.cur_t += 1
 
         possible_x = self.cur_x

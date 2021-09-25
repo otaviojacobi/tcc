@@ -21,6 +21,9 @@ class MuZero:
     def learn(self, epochs, simulations=100, verbose=False, alpha=0.01):
 
         returns = []
+        argmax_returns = []
+
+
         for epoch in tqdm(range(epochs)):
             done = False
             rewards = []
@@ -34,6 +37,9 @@ class MuZero:
 
                 mcts = MCTS(s0, self.f, self.g, self.options)
                 pi = mcts.run_sim(simulations)
+
+                #print(s0, pi)
+                #mcts.info()
 
                 opt = choice(self.options, 1, p=pi)[0]
 
@@ -101,9 +107,35 @@ class MuZero:
                 self.f.observe(s0, pi, z, alpha=alpha)
 
             #print('Finished training...')
-            
+            #argmax_returns.append(self.play_arg_max_no_sim())
 
-        return returns
+        return returns, argmax_returns
+
+    def play_arg_max_no_sim(self):
+
+        total_return = 0
+        done = False
+        s_next = self.env.reset()
+        while not done:
+            s0 = s_next
+
+            p, v = self.f.forward(s0, [])
+            opt_idx = np.argmax(p)
+            opt = self.options[opt_idx]
+            
+            while True:
+                action, should_break = opt.get_action(self.env)
+
+                if action == -1 or done:
+                    break
+
+                s_next, r, done = self.env.step(action)
+                total_return += r
+
+                if should_break:
+                    break
+
+        return total_return
 
     def play(self, env, simulations):
 

@@ -59,23 +59,18 @@ class Node:
 
         flatten_rewards = list(itertools.chain(*rewards))
 
-
         l = len(flatten_rewards)
         k = l - len(rewards[-1])
         cur_edge = self.parent_edge
-
 
         min_q = np.inf
         max_q = -np.inf
 
         i = -1
-
         depth = 0
-
         while cur_edge != None:
 
             depth = len(rewards[i])
-
             new_q = cur_edge.update(k, l, vl, flatten_rewards, depth)
 
             if new_q > max_q:

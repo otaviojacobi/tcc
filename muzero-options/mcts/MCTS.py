@@ -54,7 +54,7 @@ class MCTS:
             else:
                 pi.append(0)
 
-        #TODO: should we use this or logits ?
+        #TODO: should we use this or logits/softmax ?
         #print(pi)
         return np.array(pi) / sum(pi)
 
