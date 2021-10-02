@@ -1,6 +1,7 @@
 # distutils: language = c++
 # cython: language_level=3
 from libc.stdint cimport int8_t, int32_t
+import random
 
 cdef int8_t UP = 0
 cdef int8_t DOWN = 1
@@ -9,15 +10,13 @@ cdef int8_t LEFT = 3
 
 cdef class GridWorld:
     cdef public set possible_positions
+    cdef public set possible_starts
 
     cdef public int32_t cur_x
     cdef public int32_t cur_y
 
     cdef public int32_t goal_x
     cdef public int32_t goal_y
-
-    cdef public int32_t initial_x
-    cdef public int32_t initial_y
 
     cdef public int32_t time_limit
     cdef public int32_t cur_t
@@ -34,17 +33,20 @@ cdef class GridWorld:
         cdef list lines = grid_map.strip('\n ').split('\n')[4:]
 
         self.possible_positions = set()
+        self.possible_starts = set()
         for x, line in enumerate(lines):
             for y, char in enumerate(line):
                 if char.upper() == 'X':
-                    self.cur_x, self.cur_y = x, y
-                    self.initial_x, self.initial_y = x, y
+                    self.possible_starts.add((x, y))
 
                 if char.upper() == 'G':
                     self.goal_x, self.goal_y = x, y
 
                 if char == '.' or char == 'X' or char == 'G':
                     self.possible_positions.add((x, y))
+
+        self.cur_x, self.cur_y = random.choice(list(self.possible_starts))
+
 
     def __hash__(self):
       return hash((self.cur_x, self.cur_y))
@@ -100,8 +102,7 @@ cdef class GridWorld:
         return (self.cur_x, self.cur_y), -1.0, False
 
     cpdef object reset(self):
-        self.cur_x = self.initial_x
-        self.cur_y = self.initial_y
+        self.cur_x, self.cur_y = random.choice(list(self.possible_starts))
         self.cur_t = 0
 
         return (self.cur_x, self.cur_y)

@@ -36,9 +36,9 @@ class DynModel:
         # returns s', r
 
         if (s, o) not in self.model_table:
-            #print("NAO DEVERIA!!!")
+            #TODO: change -1.0 value -> 0.0
             return (s, random.randint(1, 10) * [-1.0])
-        
+
         return self.model_table[(s, o)]
 
     # In this paper, the dynamics function is represented deterministically;

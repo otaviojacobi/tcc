@@ -2,6 +2,7 @@ from .utils import Node
 
 import numpy as np
 import itertools
+import time
 
 class MCTS:
 
@@ -18,6 +19,9 @@ class MCTS:
 
         self.min_q = np.inf
         self.max_q = -np.inf
+
+        # Carefull, only used by run_time
+        self.sims = 0
 
     def run_sim(self, sims):
         for sim in range(sims):
@@ -77,4 +81,35 @@ class MCTS:
 
 
     def run_time(self, time_limit):
-        pass
+
+        start = time.time() * 1000
+        while (((time.time() * 1000) - start) < (time_limit - 2)):
+
+            s_prev, o, edge, rewards = self.search()
+
+            s, rs = self.dyn_model.forward(s_prev, o)
+            edge.R[(s_prev, o)] = rs
+            edge.S[(s_prev, o)] = s
+
+            rewards.append(rs)
+            new_node, vl = edge.expand(s, self.pred_model, self.dyn_model, self.options, list(itertools.chain(*rewards)))
+
+            min_q, max_q = new_node.backup(vl, rewards)
+
+            if min_q < self.min_q:
+                self.min_q = min_q
+
+            if max_q > self.max_q:
+                self.max_q = max_q
+
+            self.sims += 1
+
+        pi = []
+        for option in self.options:
+            if option in self.root.child_edges:
+                pi.append(self.root.child_edges[option].N)
+            else:
+                pi.append(0)
+
+
+        return np.array(pi) / sum(pi), self.sims
